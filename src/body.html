@@ -1,0 +1,159 @@
+<style>
+/* FLEXI additions on top of the shared Wall Unit base + BLUE WORKSPACE theme */
+.seg.six{grid-template-columns:repeat(3,1fr)}
+.bays{display:flex;flex-direction:column;gap:6px}
+.bayrow{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+.bayrow.active{border-color:var(--orange);background:var(--orange-soft)}
+.bayrow .pick{border:0;background:none;text-align:left;padding:0;font-weight:600;font-size:14px;line-height:1.2;min-height:0}
+.bayrow .pick small{display:block;font-weight:400;font-size:12px;color:var(--muted)}
+.bayrow .chips .chip{min-width:46px;min-height:36px;padding:4px 8px}
+.xbtn{border:1px solid var(--line);background:var(--panel);border-radius:8px;width:36px;min-height:36px;font-size:16px;color:var(--warn)}
+.swrow{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;font-size:13.5px}
+.swrow small{display:block;color:var(--muted);font-size:12px}
+.note2{font-size:12px;color:var(--muted);margin-top:8px}
+.list .nm code{font:inherit;color:var(--navy);font-weight:600}
+.nudge.five{grid-template-columns:repeat(4,1fr)}
+</style>
+<link rel="stylesheet" href="theme-blue-workspace.css">
+<nav class="workspace-nav" aria-label="ส่วนการออกแบบ">
+<a class="workspace-brand" href="#workspace-step-1">FLEXI <b>3D</b><small>ORGANIZE SYSTEM · จัดระบบรางติดผนัง</small></a>
+<a href="#workspace-step-1"><span aria-hidden="true">▥</span><strong>ราง</strong></a>
+<a href="#workspace-step-2"><span aria-hidden="true">▤</span><strong>สินค้า</strong></a>
+<a href="#workspace-step-3"><span aria-hidden="true">✥</span><strong>จัดวาง</strong></a>
+<a href="#workspace-step-4"><span aria-hidden="true">☷</span><strong>สรุป</strong></a>
+<div class="workspace-foot">FLEXI 3D<br><small>เลือก · จัดวาง · บันทึก</small></div>
+</nav>
+<div class="app">
+  <header class="top">
+    <img class="logo" src="icons/icon-192.png" alt="" width="40" height="40">
+    <div class="brand">
+      <h1>FLEXI <b>3D</b></h1>
+      <p id="curName">แบบใหม่ · ยังไม่ได้บันทึก</p>
+    </div>
+    <div class="spacer"></div>
+    <span class="pill" id="countPill">0 ชิ้น</span>
+    <div class="hbtns">
+      <button class="hbtn" id="myBtn" type="button"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 3.5h4l1.5 1.5H14v7.5H2z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>แบบของฉัน<span id="myBtnN"></span></button>
+      <button class="hbtn hsave" id="saveBtn" type="button"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 2h8l2 2v10H3z M5 2v4h5V2 M5 14v-4h6v4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>บันทึกแบบ</button>
+    </div>
+  </header>
+
+  <div class="main">
+    <section class="stage" aria-label="มุมมอง 3 มิติของผนัง">
+      <div id="view"></div>
+      <div id="plan2d" hidden aria-label="แบบด้านผนัง 2D"></div>
+      <div class="toolbar">
+        <div class="grp mode" role="group" aria-label="มุมมอง 2D หรือ 3D">
+          <button id="m2d">2D</button>
+          <button id="m3d" class="on">3D</button>
+        </div>
+        <div class="grp" role="group" aria-label="มุมกล้อง" id="viewGrp">
+          <button data-v="front">ด้านหน้า</button>
+          <button data-v="angle" class="on">มุมเอียง</button>
+        </div>
+        <div class="grp"><button id="slotBtn" class="on">ช่องราง</button></div>
+      </div>
+      <div class="warnbar" id="warnbar" hidden></div>
+      <div class="hint" id="hint">แตะชิ้นงานเพื่อเลือก · ลากขึ้นลงทีละ 10 ซม. หรือลากไปช่องข้าง ๆ · ลากที่ว่างเพื่อหมุนมุมมอง</div>
+    </section>
+
+    <aside class="panel">
+      <div class="step" id="workspace-step-1">
+        <div class="step-h"><span class="num">1</span><h2>ผนังและราง</h2><span class="aux">รางรับชั้นมีช่องทุก 10 ซม. · ระยะรางเท่ากับความกว้างแผ่น</span></div>
+        <div class="row2">
+          <label class="field"><span>ความกว้างผนัง</span><div class="unit"><input id="wallW" type="number" inputmode="numeric" min="60" max="800" step="10"><em>ซม.</em></div></label>
+          <label class="field"><span>ความสูงผนัง</span><div class="unit"><input id="wallH" type="number" inputmode="numeric" min="120" max="400" step="10"><em>ซม.</em></div></label>
+        </div>
+        <div class="label">ความสูงรางรับชั้น</div>
+        <div class="chips" id="railChips"></div>
+        <div class="row2" style="margin-top:10px">
+          <label class="field"><span>ปลายรางด้านบน สูงจากพื้น</span><div class="unit"><input id="railTop" type="number" inputmode="numeric" min="60" max="400" step="5"><em>ซม.</em></div></label>
+          <div class="field"><span>สีราง และแขนรับชั้น</span><div class="chips" id="hwChips"></div></div>
+        </div>
+        <div class="swrow"><div>แขวนรางจากรางแขวนบน<small>รางแขวนบนพร้อมฝาครอบ 1 เส้นต่อช่อง</small></div><button class="switch" id="trackSw" role="switch" aria-checked="false" aria-label="ใช้รางแขวนบน"></button></div>
+        <div class="label">ช่องระหว่างราง · แตะชื่อช่องเพื่อเลือก</div>
+        <div class="bays" id="bays"></div>
+        <div class="addopen" style="margin-top:8px">
+          <button id="addBay60" type="button"><svg class="mini" viewBox="0 0 30 30" aria-hidden="true"><path d="M6 4v22M24 4v22M6 12h18M6 20h18" stroke="currentColor" stroke-width="2" fill="none"/></svg><span>+ ช่อง 60<small>รางห่าง 60 ซม.</small></span></button>
+          <button id="addBay80" type="button"><svg class="mini" viewBox="0 0 30 30" aria-hidden="true"><path d="M3 4v22M27 4v22M3 12h24M3 20h24" stroke="currentColor" stroke-width="2" fill="none"/></svg><span>+ ช่อง 80<small>รางห่าง 80 ซม.</small></span></button>
+        </div>
+        <div class="label">ตำแหน่งบนผนัง</div>
+        <div class="chips" id="alignChips"></div>
+      </div>
+
+      <div class="step" id="workspace-step-2">
+        <div class="step-h"><span class="num">2</span><h2>เลือกสินค้า</h2><span class="aux" id="step2Aux"></span></div>
+        <div class="seg six" id="typeSeg"></div>
+        <div id="draftOpts"></div>
+        <div class="label">ใส่ในช่อง</div>
+        <div class="chips" id="bayPick"></div>
+        <div class="spec" id="specBox"></div>
+        <button class="btn primary" id="addBtn">+ เพิ่มลงช่องที่เลือก</button>
+        <button class="btn ghost" id="addAllBtn" style="width:100%;margin-top:8px">+ เพิ่มทุกช่อง ระดับเดียวกัน</button>
+      </div>
+
+      <div class="step" id="workspace-step-3">
+        <div class="step-h"><span class="num">3</span><h2>จัดตำแหน่ง</h2></div>
+        <div id="selArea"></div>
+        <div class="label">เริ่มจากแบบตัวอย่าง</div>
+        <div class="presets" id="presets"></div>
+      </div>
+
+      <div class="step" id="workspace-step-4">
+        <div class="step-h"><span class="num">4</span><h2>รายการสินค้า</h2><span class="aux" id="listAux"></span></div>
+        <ul class="list" id="list"></ul>
+        <div class="sum" id="sum"></div>
+        <div class="note2" id="lrNote"></div>
+        <div class="export">
+          <button class="btn" id="pngBtn" type="button">บันทึกเป็น PNG</button>
+          <button class="btn" id="pdfBtn" type="button">บันทึกเป็น PDF</button>
+        </div>
+        <div class="btns">
+          <button class="btn ghost" id="copyBtn">คัดลอกรายการ</button>
+          <button class="btn danger" id="clearBtn">ล้างสินค้าทั้งหมด</button>
+        </div>
+        <div id="clearConfirm" hidden>
+          <div class="btns"><button class="btn danger" id="clearYes">ยืนยัน ล้างทุกชิ้น</button><button class="btn ghost" id="clearNo">ยกเลิก</button></div>
+        </div>
+        <textarea class="copybox" id="copyBox" readonly hidden aria-label="ข้อความรายการสินค้า"></textarea>
+      </div>
+    </aside>
+  </div>
+</div>
+<div class="toast" id="toast" hidden></div>
+<div class="modal" id="saveModal" hidden>
+  <form class="box narrow" id="saveForm">
+    <div class="mhead"><h3>บันทึกแบบ</h3></div>
+    <label class="field"><span>ชื่อแบบ</span><div class="unit"><input id="dName" type="text" maxlength="60" placeholder="เช่น ห้องเก็บของ คุณเอ" style="font-weight:500"></div></label>
+    <p id="saveWhere"></p>
+    <div class="btns" style="margin-top:0">
+      <button class="btn ghost" id="dSaveOver" type="button" hidden></button>
+      <button class="btn primary-s" id="dSaveNew" type="button">บันทึกแบบ</button>
+    </div>
+    <button class="btn ghost" id="dCancel" type="button">ยกเลิก</button>
+  </form>
+</div>
+<div class="modal" id="designsModal" hidden>
+  <div class="box wide">
+    <div class="mhead"><h3>แบบของฉัน</h3><span class="aux" id="dWhere"></span></div>
+    <div class="warnnote" id="dNote"></div>
+    <div class="dlist" id="dList"></div>
+    <div class="btns" style="margin-top:0">
+      <button class="btn ghost" id="dNew" type="button">+ เริ่มแบบใหม่</button>
+      <button class="btn ghost" id="dClose" type="button">ปิด</button>
+    </div>
+  </div>
+</div>
+<div class="modal" id="exportModal" hidden>
+  <div class="box">
+    <p>หน้านี้ยังบันทึกไฟล์โดยตรงไม่ได้ กดค้างหรือคลิกขวาที่รูปแล้วเลือก "บันทึกรูปภาพ"</p>
+    <img id="exportImg" alt="แบบจัดระบบ FLEXI พร้อมรายการสินค้า">
+    <button class="btn ghost" id="exportClose" type="button">ปิด</button>
+  </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

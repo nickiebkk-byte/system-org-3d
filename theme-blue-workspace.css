@@ -1,0 +1,43 @@
+/* BLUE WORKSPACE 04 — presentation layer only. Original app handlers preserved. */
+:root,:root[data-theme="dark"],:root:not([data-theme="light"]){
+ --navy:#0755b5;--navy-ink:#073574;--orange:#ff781f;--orange-soft:#fff0e5;
+ --bg:#f1f5fb;--panel:#fff;--line:#dce5f1;--fg:#142e50;--muted:#627b9a;
+ --chip:#edf3fc;--chip-on:#0755b5;--chip-on-fg:#fff;--warn:#c8361f;--warn-soft:#fbe4df;--ok:#1f7a4d;
+ --sky:#2f7fd0;--sky-soft:#e3effb;--scene-bg:#e7ebf1;--scene-floor:#c9ced6;
+ --f-display:"Prompt",sans-serif;--f-body:"Prompt",sans-serif;color-scheme:light;
+}
+html{scroll-behavior:smooth;scroll-padding-top:110px}
+body,button,input,select,textarea,svg text{font-family:"Prompt",sans-serif!important}
+body{text-transform:uppercase; padding-left:174px}
+button,input,select{min-height:44px}
+.workspace-nav{position:fixed;inset:0 auto 0 0;width:174px;z-index:15;background:linear-gradient(180deg,#0755b5,#04357e);padding:28px 12px;display:flex;flex-direction:column;gap:10px;color:#fff}
+.workspace-nav a{text-decoration:none;color:#fff;display:flex;align-items:center;gap:12px;padding:14px 12px;border-radius:10px;min-height:52px}
+.workspace-nav a:hover,.workspace-nav a:focus-visible{background:#ff781f;color:#fff}
+.workspace-nav strong{font-weight:500;font-size:16px}
+.workspace-nav span{font-size:26px;line-height:1;width:26px;text-align:center}
+.workspace-nav .workspace-brand{display:block;padding:0 8px 24px;font-weight:800;font-size:20px;line-height:1.3}
+.workspace-brand b{color:#ffb575}.workspace-brand small{display:block;font-size:10px;font-weight:400;margin-top:10px;color:#d6e8ff}
+.workspace-foot{margin-top:auto;padding:16px 10px;font-weight:600;font-size:14px;color:#fff}.workspace-foot small{font-weight:400;font-size:11px;color:#d6e8ff}
+header.top{min-height:100px;padding:18px 24px;gap:14px;background:#fff}
+.brand h1{font-size:clamp(26px,3.2vw,44px);font-weight:800;letter-spacing:-.03em}.brand h1 b{color:#ff781f}
+.brand p{font-size:13px;margin-top:6px;max-width:36vw}
+.logo{width:46px;height:46px;border-radius:12px}
+.hbtn{min-height:44px;border-radius:10px}.pill{background:#eaf2ff;color:#0755b5}
+.main{grid-template-columns:minmax(0,1fr) minmax(350px,390px);gap:16px;padding:16px;overflow:hidden}
+.stage{border-radius:16px;border:1px solid #dce5f1;overflow:hidden;box-shadow:0 6px 24px #1637630a}
+aside.panel{border:0;background:transparent;scroll-behavior:smooth;border-radius:14px}
+.step{background:#fff;border:1px solid #dce5f1;border-radius:14px;padding:20px;margin-bottom:14px;scroll-margin-top:14px}
+.step:target{border-color:#ff781f;box-shadow:0 0 0 2px #ff781f22}
+.step-h{flex-wrap:wrap;gap:8px}.step-h h2{font-size:21px;font-weight:700}.step-h .aux{flex-basis:100%;text-align:left;margin:0 0 0 36px;font-size:12px}
+.num{background:#0755b5;width:28px;height:28px;font-weight:700}.step:target .num{background:#ff781f}
+.label{font-size:13px;color:#355677}.field span{font-size:13px}.unit{background:#f7faff}.unit input{font-size:16px}
+.btn{border-radius:10px;min-height:46px}.btn.primary{background:#ff781f;color:#fff;font-weight:600;font-size:16px}
+.seg{gap:6px}.seg button{border-radius:10px}.seg button.on{background:#0755b5;color:#fff}
+.toolbar{top:14px;left:14px;right:14px;gap:7px}.toolbar .grp{border-radius:10px}.toolbar button{min-height:38px;padding:6px 9px}.toolbar .grp.mode button.on{background:#0755b5}
+.chip{min-height:42px}.sw button{min-width:36px;min-height:36px}.export .btn{background:#0755b5}.hint{padding:8px 10px;border-radius:8px;background:#ffffffd9;font-size:12px}
+.modal{z-index:40}.toast{z-index:50}.modal h3{font-size:24px}
+@media(min-width:901px) and (max-width:1180px){body{padding-left:118px}.workspace-nav{width:118px;padding:22px 7px}.workspace-nav .workspace-brand{font-size:15px}.workspace-brand small{font-size:9px}.workspace-nav a{gap:6px;padding:12px 8px}.workspace-nav strong{font-size:14px}.workspace-foot{font-size:11px;padding:10px 5px}.main{grid-template-columns:minmax(0,1fr) 350px;gap:10px;padding:10px}header.top{padding:14px;min-height:90px}.brand h1{font-size:30px}.brand p{max-width:25vw}.hbtn{padding:8px;font-size:12px}.logo{display:none}.step{padding:16px}}
+@media(max-width:900px){body{padding-left:0;padding-bottom:calc(82px + env(safe-area-inset-bottom,0px))}.workspace-nav{inset:auto 0 0;width:auto;height:calc(74px + env(safe-area-inset-bottom,0px));padding:6px 10px calc(6px + env(safe-area-inset-bottom,0px));flex-direction:row;gap:4px;justify-content:space-around;box-shadow:0 -3px 18px #07357420}.workspace-nav .workspace-brand,.workspace-foot{display:none}.workspace-nav a{flex:1;min-width:0;min-height:58px;flex-direction:column;justify-content:center;gap:2px;padding:4px}.workspace-nav span{font-size:25px}.workspace-nav strong{font-size:12px}.main{display:block;padding:12px;overflow:visible}.stage{height:54vh;min-height:340px;max-height:620px}.panel{margin-top:14px}.step{scroll-margin-top:160px}header.top{position:sticky;top:0;z-index:12;min-height:88px;padding:12px 16px;background:#0755b5;color:#fff;box-shadow:0 3px 12px #0735741a}.brand h1{font-size:30px;color:#fff}.brand h1 b{color:#ffb575}.brand p{color:#dcecff;max-width:46vw}.logo{width:40px;height:40px}.pill{background:#ffffff20;color:#fff}.hbtns{width:auto;order:initial}.hbtn{background:#ffffff12;border-color:#ffffff44;color:#fff}.hbtn.hsave{background:#ff781f;border-color:#ff781f}.toast{bottom:calc(90px + env(safe-area-inset-bottom,0px))}}
+@media(max-width:600px){header.top{flex-wrap:wrap;row-gap:10px}.brand h1{font-size:27px}.brand p{max-width:60vw;font-size:11px}.logo{width:36px;height:36px}.top .spacer{display:none}.pill{margin-left:auto;font-size:11px;padding:5px 8px}.hbtns{order:5;width:100%;display:flex;gap:8px}.hbtns .hbtn{flex:1;justify-content:center;font-size:13px}.hbtn svg{display:inline-block}.main{padding:10px}.stage{height:47vh;min-height:330px;border-radius:12px}.toolbar{top:9px;left:9px;right:9px;gap:5px}.toolbar .grp{padding:2px;max-width:100%;flex-wrap:wrap}.toolbar button{font-size:11px;padding:5px 7px;min-height:34px}.toolbar .grp.mode button{min-width:38px}.step{padding:16px;border-radius:12px;scroll-margin-top:170px}.step-h h2{font-size:21px}.step-h .aux{margin-left:0}.seg button{padding:9px 5px}.seg button b{font-size:12px}.seg button small{font-size:10px}.hint{font-size:10px;bottom:8px;left:8px;right:8px}#plan2d{padding-top:120px}.specrow{gap:8px}.specimg{width:82px}.modal .box{padding:14px}}
+@media(prefers-reduced-motion:reduce){html,aside.panel{scroll-behavior:auto}}
+.seg button.on b,.seg button[data-t="hid"].on b,.seg button[data-t="wu"].on b,.seg button.on small{color:#fff}
