@@ -330,7 +330,7 @@ textarea.copybox{width:100%;height:130px;margin-top:8px;font-size:12.5px;border:
           <label class="field"><span>ความกว้างผนัง</span><div class="unit"><input id="wallW" type="number" inputmode="numeric" min="60" max="800" step="10"><em>ซม.</em></div></label>
           <label class="field"><span>ความสูงผนัง</span><div class="unit"><input id="wallH" type="number" inputmode="numeric" min="120" max="400" step="10"><em>ซม.</em></div></label>
         </div>
-        <div class="label">ความสูงรางรับชั้น</div>
+        <div class="label">ความสูงราง · ต่อ 60 / 90 / 150 รวมกันได้</div>
         <div class="chips" id="railChips"></div>
         <div class="row2" style="margin-top:10px">
           <label class="field"><span>ปลายรางด้านบน สูงจากพื้น</span><div class="unit"><input id="railTop" type="number" inputmode="numeric" min="60" max="400" step="5"><em>ซม.</em></div></label>
@@ -426,7 +426,14 @@ textarea.copybox{width:100%;height:130px;margin-top:8px;font-size:12.5px;border:
 const $=id=>document.getElementById(id);
 const KEY='flexi-organize-3d';
 const PITCH=10;                       // slot spacing on the wall rail (cm)
-const RAIL_HS=[60,90,150];
+const RAIL_PCS=[150,90,60];           // rail lengths sold; any total made by joining them end to end
+const RAIL_HS=[60,90,120,150,180,210,240,270,300];
+function railCombo(h){ // fewest pieces, then the longest pieces first (fewer joints low on the wall)
+  const best={0:[]};
+  for(let t=10;t<=h;t+=10) RAIL_PCS.forEach(pc=>{const r=best[t-pc];if(t-pc>=0&&r){const c=[...r,pc].sort((a,b)=>b-a);if(!best[t]||c.length<best[t].length)best[t]=c}});
+  return best[h]||null;
+}
+const comboTxt=h=>{const c=railCombo(h);return c&&c.length>1?c.join('+'):''};
 const HW={w:{name:'ขาว',c:'#F1F2F4'},k:{name:'ดำ',c:'#2A2C31'}};
 const COL={w:{id:'w',name:'ขาว',c:'#F4F3EF',g:'#E6E3DC',plain:true},wn:{id:'wn',name:'วอลนัท',c:'#8B5B3C',g:'#5C3820'}};
 const WALLC=['#EEEAE3','#F6F6F4','#DCE3EA','#E8DCCB'];
@@ -537,7 +544,7 @@ function bom(A){
   A=A||analyse(); const hw=S.hw, hn=HW[hw].name, rows={};
   const add=(code,o,q,side)=>{const r=rows[code]||(rows[code]=Object.assign({code,q:0,L:0,R:0},o));r.q+=q;if(side)r[side]+=q};
   const nb=S.bays.length;
-  add(SKU.rail[S.railH][hw],{name:`รางรับชั้น ${S.railH} ซม. ${hn}`,u:'เส้น',ph:'rail',ord:1},nb+1);
+  (railCombo(S.railH)||[]).forEach(pc=>add(SKU.rail[pc][hw],{name:`รางรับชั้น ${pc} ซม. ${hn}`,u:'เส้น',ph:'rail',ord:1-pc/1000},nb+1));
   if(S.track) S.bays.forEach(b=>add(SKU.track[b.w],{name:`รางแขวนบนพร้อมฝาครอบ ${b.w} ซม. ขาว`,u:'เส้น',ph:'track',ord:2},1));
   A.br.forEach(b=>{
     if(b.kind==='br2') add(SKU.br2[b.d][hw],{name:`แขนรับชั้นเหล็กคู่ ${b.d} ซม. ${hn}`,u:'ตัว',ph:'br-2',ord:3},1);
@@ -648,6 +655,7 @@ function buildSystem(A){
   const top=S.railTop, bot=S.railTop-S.railH;
   for(let r=0;r<=nb;r++){
     const x=railX(r); const m=box(2.5,S.railH,1.6,metal); m.position.set(x,top-S.railH/2,.8); sysG.add(m);
+    {let jy=top;(railCombo(S.railH)||[]).slice(0,-1).forEach(pc=>{jy-=pc;const j=box(2.7,.35,1.8,new THREE.MeshBasicMaterial({color:S.hw==='k'?0x8a8f98:0x6b7380}),false);j.position.set(x,jy,.8);sysG.add(j)})}
     if(showSlots) for(let s=0;s<nSlots();s++){const k=new THREE.Mesh(new THREE.PlaneGeometry(.8,3.2),slotM);k.position.set(x,slotY(s)-1.2,1.62);sysG.add(k)}
   }
   if(S.track) S.bays.forEach((b,i)=>{const t=box(b.w,4.5,3,white);t.position.set(railX(i)+b.w/2,top+2.6,1.5);sysG.add(t)});
@@ -763,7 +771,7 @@ function select(id,quiet){S.sel=id;const f=findItem(id);if(f)S.active=f.b;buildS
 function renderStep1(){
   $('wallW').value=S.wall.w; $('wallH').value=S.wall.h; $('railTop').value=S.railTop;
   const rc=$('railChips'); rc.innerHTML='';
-  RAIL_HS.forEach(h=>rc.appendChild(chip(`${h} ซม.<small style="display:block;font-weight:400;font-size:11px;opacity:.8">${h/PITCH} ช่อง</small>`,S.railH===h,false,()=>{setRailH(h)},'sz')));
+  RAIL_HS.forEach(h=>rc.appendChild(chip(`${h} ซม.<small style="display:block;font-weight:400;font-size:11px;opacity:.8">${comboTxt(h)||'1 เส้น'} · ${h/PITCH} ช่อง</small>`,S.railH===h,h>S.wall.h,()=>{setRailH(h)},'sz')));
   const hc=$('hwChips'); hc.innerHTML='';
   Object.entries(HW).forEach(([k,v])=>hc.appendChild(chip(`<i style="background:${v.c}"></i>${v.name}`,S.hw===k,false,()=>{S.hw=k;buildSystem();commit()},'br')));
   const sw=$('trackSw'); sw.setAttribute('aria-checked',String(!!S.track));
@@ -772,7 +780,7 @@ function renderStep1(){
   renderBays();
 }
 function setRailH(h){
-  S.railH=h; if(S.railTop-h<0) S.railTop=Math.min(S.wall.h,h+20);
+  S.railH=h; if(S.railTop-h<0||S.railTop>S.wall.h) S.railTop=Math.min(S.wall.h,Math.max(S.railTop,h+20));
   S.bays.forEach(b=>b.items.forEach(it=>{const mx=nSlots()-span(it);if(it.slot>mx)it.slot=Math.max(0,mx)}));
   buildSystem(); setView(); commit();
 }
@@ -920,7 +928,7 @@ function renderList(A){
   $('countPill').textContent=`${n} ชิ้น · ${S.bays.length} ช่อง`;
 }
 function listText(){
-  const items=bom(); const lines=[`แบบจัดระบบ FLEXI${S.cur?': '+S.cur.name:''}`,`ผนัง ${S.wall.w}×${S.wall.h} ซม. · ราง ${S.railH} ซม. ปลายรางสูง ${S.railTop} ซม. · ${S.bays.map(b=>b.w).join('+')} ซม.`,''];
+  const items=bom(); const lines=[`แบบจัดระบบ FLEXI${S.cur?': '+S.cur.name:''}`,`ผนัง ${S.wall.w}×${S.wall.h} ซม. · ราง ${S.railH} ซม.${comboTxt(S.railH)?' ('+comboTxt(S.railH)+')':''} ปลายรางสูง ${S.railTop} ซม. · ${S.bays.map(b=>b.w).join('+')} ซม.`,''];
   items.forEach(i=>lines.push(`${i.code}  ${i.name}  × ${i.q} ${i.u}${i.lr?` (ซ้าย ${i.L} · ขวา ${i.R})`:''}`));
   return lines.join('\n');
 }
@@ -946,6 +954,7 @@ function elevSVG(opt){
   const top=S.railTop, nb=S.bays.length;
   if(S.track) S.bays.forEach((b,i)=>{s+=`<rect x="${X(railX(i))}" y="${Y(top+5)}" width="${b.w}" height="4.5" fill="#fff" stroke="#9aa3af" stroke-width=".4"/>`});
   for(let r=0;r<=nb;r++){const x=railX(r);s+=`<rect x="${X(x)-1.25}" y="${Y(top)}" width="2.5" height="${S.railH}" fill="${hwc}"/>`;
+    {let jy=top;(railCombo(S.railH)||[]).slice(0,-1).forEach(pc=>{jy-=pc;s+=`<rect x="${X(x)-2}" y="${Y(jy)-.4}" width="4" height=".8" fill="#ff781f"/>`})}
     if(showSlots||opt.mode==='export') for(let k=0;k<nSlots();k++) s+=`<rect x="${X(x)-.4}" y="${Y(slotY(k))-.4}" width=".8" height="3" fill="${S.hw==='k'?'#888':'#fff'}"/>`}
   // items
   const hts=[];
@@ -1029,7 +1038,7 @@ function newPage(n,total,dateStr){
   x.fillStyle='#fff'; x.font='700 44px Prompt, sans-serif'; x.textBaseline='middle';
   x.fillText(S.cur?`แบบจัดระบบ FLEXI: ${S.cur.name}`:'แบบจัดระบบ FLEXI ORGANIZE',PG.m,55);
   x.font='400 22px Prompt, sans-serif'; x.textAlign='right';
-  x.fillText(`ผนัง ${S.wall.w}×${S.wall.h} ซม. · ราง ${S.railH} ซม. · ${dateStr}`,PG.w-PG.m,46);
+  x.fillText(`ผนัง ${S.wall.w}×${S.wall.h} ซม. · ราง ${S.railH} ซม.${comboTxt(S.railH)?' ('+comboTxt(S.railH)+')':''} · ${dateStr}`,PG.w-PG.m,46);
   x.fillText(`หน้า ${n}/${total}`,PG.w-PG.m,78); x.textAlign='left';
   x.fillStyle='#8A93A3'; x.font='400 18px Prompt, sans-serif';
   x.fillText('หน่วยเป็นเซนติเมตร · ความสูงวัดจากพื้นถึงผิวชั้น / ขอบบนตะกร้า · ตรวจสอบรหัสสินค้าก่อนสั่งซื้อ',PG.m,PG.h-36);

@@ -1,5 +1,5 @@
 // Keeps the app usable offline after the first visit.
-const CACHE='flexi-organize-3d-v2';
+const CACHE='flexi-organize-3d-v3';
 const SHELL=['./','./index.html','./theme-blue-workspace.css','./manifest.webmanifest','./favicon.ico',
   './icons/icon-192.png','./icons/icon-512.png','./icons/apple-touch-icon.png',
   ...['basket-s','basket-d','peg','wire','flat','mel','slide-1','slide-2','br-2','br-1','brh-2','brh-1','rack','rod','track','rail'].map(n=>'./photos/'+n+'.jpg')];
