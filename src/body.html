@@ -13,10 +13,31 @@
 .note2{font-size:12px;color:var(--muted);margin-top:8px}
 .list .nm code{font:inherit;color:var(--navy);font-weight:600}
 .nudge.five{grid-template-columns:repeat(4,1fr)}
+/* idea gallery */
+.modal .box.ideas{width:min(1040px,100%);gap:12px}
+.itabs{display:flex;flex-wrap:wrap;gap:6px}
+.igrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}
+.icard{border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:0;overflow:hidden;text-align:left;display:flex;flex-direction:column;min-height:0}
+.icard:hover,.icard:focus-visible{border-color:var(--orange)}
+.icard.cur{border-color:var(--orange);box-shadow:0 0 0 2px var(--orange-soft)}
+.icard img{display:block;width:100%;aspect-ratio:3/2;object-fit:cover;background:var(--scene-bg)}
+.icard span{padding:8px 10px;font-weight:600;font-size:13.5px;line-height:1.25}
+.icard small{display:block;font-weight:400;font-size:11.5px;color:var(--muted);margin-top:2px}
+.idetail{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:16px;align-items:start}
+.idetail img{width:100%;border-radius:12px;border:1px solid var(--line)}
+.idetail h4{margin:0 0 4px;font-size:22px;color:var(--navy-ink)}
+.idetail .meta{font-size:13px;color:var(--muted);display:flex;flex-direction:column;gap:4px}
+.idetail .meta b{color:var(--fg);font-weight:600}
+.iref{display:grid;grid-template-columns:120px 1fr;gap:12px;align-items:center;padding:8px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+.iref img{width:120px;aspect-ratio:3/2;object-fit:cover;border-radius:8px;display:block}
+.iref b{display:block;font-size:14px}.iref small{color:var(--muted);font-size:12px}
+.ideabtn{width:100%;margin-top:8px;border:1px dashed var(--orange);background:var(--orange-soft);color:var(--fg);border-radius:12px;padding:12px;font-weight:600;font-size:15px;display:flex;align-items:center;justify-content:center;gap:8px}
+@media(max-width:700px){#ideasAux{display:none}.mhead h3{white-space:nowrap}.idetail{grid-template-columns:1fr}.igrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.icard span{font-size:12.5px}}
 </style>
 <link rel="stylesheet" href="theme-blue-workspace.css">
 <nav class="workspace-nav" aria-label="ส่วนการออกแบบ">
 <a class="workspace-brand" href="#workspace-step-1">FLEXI <b>3D</b><small>ORGANIZE SYSTEM · จัดระบบรางติดผนัง</small></a>
+<a href="#ideas" id="navIdeas"><span aria-hidden="true">✦</span><strong>ไอเดีย</strong></a>
 <a href="#workspace-step-1"><span aria-hidden="true">▥</span><strong>ราง</strong></a>
 <a href="#workspace-step-2"><span aria-hidden="true">▤</span><strong>สินค้า</strong></a>
 <a href="#workspace-step-3"><span aria-hidden="true">✥</span><strong>จัดวาง</strong></a>
@@ -33,6 +54,7 @@
     <div class="spacer"></div>
     <span class="pill" id="countPill">0 ชิ้น</span>
     <div class="hbtns">
+      <button class="hbtn" id="ideaBtn" type="button"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5a4.5 4.5 0 0 0-2.6 8.2V12h5.2V9.7A4.5 4.5 0 0 0 8 1.5zM6 14h4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>แบบไอเดีย</button>
       <button class="hbtn" id="myBtn" type="button"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 3.5h4l1.5 1.5H14v7.5H2z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>แบบของฉัน<span id="myBtnN"></span></button>
       <button class="hbtn hsave" id="saveBtn" type="button"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 2h8l2 2v10H3z M5 2v4h5V2 M5 14v-4h6v4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>บันทึกแบบ</button>
     </div>
@@ -95,8 +117,9 @@
       <div class="step" id="workspace-step-3">
         <div class="step-h"><span class="num">3</span><h2>จัดตำแหน่ง</h2></div>
         <div id="selArea"></div>
-        <div class="label">เริ่มจากแบบตัวอย่าง</div>
-        <div class="presets" id="presets"></div>
+        <div class="label">ภาพไอเดียที่ใช้อ้างอิง</div>
+        <div id="ideaRef"></div>
+        <button class="ideabtn" id="ideaBtn2" type="button">✦ เลือกแบบไอเดีย 22 แบบ</button>
       </div>
 
       <div class="step" id="workspace-step-4">
@@ -142,6 +165,18 @@
       <button class="btn ghost" id="dNew" type="button">+ เริ่มแบบใหม่</button>
       <button class="btn ghost" id="dClose" type="button">ปิด</button>
     </div>
+  </div>
+</div>
+<div class="modal" id="ideasModal" hidden>
+  <div class="box ideas">
+    <div class="mhead"><h3 id="ideasTitle">แบบไอเดีย</h3><span class="aux" id="ideasAux">เลือกภาพ แล้วกด "ใช้แบบนี้" โครงสร้างจะขึ้นใน 2D และ 3D แก้ไขต่อได้</span></div>
+    <div id="ideasList">
+      <div class="itabs" id="ideaTabs"></div>
+      <div class="igrid" id="ideaGrid" style="margin-top:12px"></div>
+    </div>
+    <div id="ideaDetail" hidden></div>
+    <div class="warnnote" id="ideaWarn"></div>
+    <button class="btn ghost" id="ideasClose" type="button">ปิด</button>
   </div>
 </div>
 <div class="modal" id="exportModal" hidden>

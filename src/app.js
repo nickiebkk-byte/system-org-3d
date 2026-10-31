@@ -478,18 +478,92 @@ function renderSel(liveOnly){
   $('dupAll').onclick=()=>{let n=0;S.bays.forEach((bay,i)=>{if(i===b)return;const c=Object.assign({},it,{id:uid++});if(canPlace(i,c,it.slot)){bay.items.push(c);n++}});
     buildSystem();commit();toast(n?`คัดลอกไป ${n} ช่อง ระดับเดียวกัน`:'ช่องอื่นไม่มีที่ว่างระดับนี้')};
 }
-const PRESETS={
-  office:{name:'มุมทำงาน',railH:150,railTop:200,bays:[{w:80,items:[['mel',2,{d:30,col:'wn'}],['mel',6,{d:30,col:'wn'}],['mel',10,{d:30,col:'wn'}]]},{w:80,items:[['mel',2,{d:30,col:'wn'}],['peg',5],['mel',10,{d:30,col:'wn'}]]}]},
-  wardrobe:{name:'ตู้เสื้อผ้าเปิด',railH:150,railTop:205,bays:[{w:80,items:[['wire',0,{d:40}],['hang',1,{hk:'rod',d:30}]]},{w:60,items:[['wire',0,{d:40}],['basket',5,{bk:'s'}],['basket',8,{bk:'d'}],['basket',12,{bk:'s'}]]},{w:80,items:[['wire',0,{d:40}],['hang',3,{hk:'rack',d:40}],['flat',10,{d:40}]]}]},
-  store:{name:'ห้องเก็บของ',railH:90,railTop:180,bays:[{w:60,items:[['wire',0,{d:30}],['basket',3,{bk:'s'}],['basket',6,{bk:'s'}]]},{w:60,items:[['wire',0,{d:30}],['peg',3],['flat',8,{d:30}]]}]}
-};
-function applyPreset(k){
-  const p=PRESETS[k]; S.railH=p.railH; S.railTop=p.railTop; S.sel=null; S.active=0;
-  S.wall.w=Math.max(S.wall.w,p.bays.reduce((a,b)=>a+b.w,0)+40);
-  S.bays=p.bays.map(b=>({w:b.w,items:b.items.map(([t,slot,o])=>{const it=Object.assign({t,d:30,col:'w',hi:false,bk:'s',hk:'rack'},o||{},{id:uid++,slot});normDraft(it);return it})}));
-  buildRoom();buildSystem();setView();commit();toast(`ใช้แบบตัวอย่าง "${p.name}"`);
+/* ---------- Idea gallery: 22 example layouts from the SYSTEM ORGANIZING idea set ----------
+   Codes: M/N = melamine white/walnut + depth, W = wire shelf, F = flat shelf, BS/BD = shallow/deep basket,
+   A = aluminium rod + bracket depth, R = 6-rod rack, P = pegboard; @n = rail slot from the top (10 cm each). */
+const IDEA_CATS={all:'ทั้งหมด',g:'ตู้เสื้อผ้า & ชั้นทั่วไป',l:'ห้องซักรีด',s:'ห้องเก็บของ'};
+const IDEAS=[
+ {n:'01',en:'SMALL / LOW',th:'ชั้นรองเท้าหน้าประตู',c:'g',h:90,top:125,b:[[60,'M30@0 M30@3 M30@5 BS@7']]},
+ {n:'02',en:'SMALL / MEDIUM',th:'ชั้นผ้าเช็ดตัว มุมซักล้าง',c:'g',h:150,top:200,b:[[60,'M40@0 W40@4 W40@7 BD@10']]},
+ {n:'03',en:'SMALL / TALL',th:'ราวแขวนเสื้อ ห้องนอนเล็ก',c:'g',h:210,top:230,b:[[60,'N40@0 A30@1 BS@18']]},
+ {n:'04',en:'MEDIUM / LOW',th:'ชั้นหนังสือ ห้องเด็ก',c:'g',h:90,top:145,b:[[60,'M30@0 N30@4 BS@6'],[60,'M30@0 N30@4 BS@6']]},
+ {n:'05',en:'MEDIUM / MEDIUM',th:'ชั้นหนังสือ มุมทำงาน',c:'g',h:150,top:200,b:[[60,'N30@0 W30@3 N30@6 BS@8 N30@11 BS@13'],[60,'N30@0 W30@3 N30@6 BS@8 N30@11 BS@13']]},
+ {n:'06',en:'MEDIUM / TALL',th:'ตู้เสื้อผ้าเปิด 2 ช่อง',c:'g',h:210,top:230,b:[[60,'W40@0 A30@1 BS@17'],[60,'W40@0 A30@1 W40@8 A30@9 BS@17']]},
+ {n:'07',en:'LARGE / LOW',th:'ตู้เสื้อผ้า รองเท้า กระเป๋า',c:'g',h:150,top:205,b:[[60,'M40@0 M40@3 W30@5 A30@6 BS@11 BS@13'],[60,'M40@0 M40@3 W30@5 A30@6 BS@11 BS@13'],[60,'M40@0 M40@3 W30@5 A30@6 BS@11 BS@13'],[60,'M40@0 M40@3 W30@5 A30@6 BS@11 BS@13']]},
+ {n:'08',en:'LARGE / MEDIUM',th:'ชั้นครัว แพนทรี',c:'g',h:150,top:210,b:[[80,'N30@0 N30@4 A30@6 M30@13'],[80,'N30@0 N30@4 N30@7 W30@9 M30@13'],[60,'N30@0 N30@4 BS@8 BS@10 BS@12']]},
+ {n:'09',en:'LARGE / TALL',th:'ตู้เสื้อผ้าเต็มผนัง',c:'g',h:210,top:230,b:[[80,'W40@0 A30@1 W40@17'],[80,'W40@0 A30@1 W40@8 A30@9 W40@17'],[60,'W40@0 W40@4 W40@7 BS@10 BS@13 BD@16'],[80,'W40@0 A30@1 W40@11 W40@14 W40@18']]},
+ {n:'10',en:'MEDIUM / TALL MULTIFUNCTION',th:'ตู้เสื้อผ้า + ผ้าพับ',c:'g',h:210,top:225,b:[[60,'W40@0 A30@1 W40@11 BS@13 BD@16'],[60,'W40@0 W40@4 W40@7 W40@10 BS@13 BD@16'],[60,'W40@0 A30@1 W40@11 BS@13 BD@16']]},
+ {n:'11',en:'LARGE / TALL WALK-IN',th:'ห้องแต่งตัว Walk-in',c:'g',h:210,top:230,corner:1,b:[[80,'W40@0 A30@1 W40@15 W40@18'],[60,'W40@0 A30@1 W40@10 BS@12 BS@14 BS@16'],[80,'W40@0 A30@1 A40@10 W40@18'],[60,'W40@0 W40@3 W40@6 W40@9 BS@11 BS@13 W40@16 W40@18']]},
+ {n:'12',en:'MEDIUM / MIXED HEIGHT',th:'ราวแขวน + ชั้นโชว์',c:'g',h:210,top:225,b:[[80,'N30@0 A30@1 W30@14 W30@16'],[60,'N30@0 N30@2 N30@6 N30@10 BS@12 BD@15'],[80,'N30@0 A30@1 W30@13 W30@16']]},
+ {n:'13',en:'COMPACT LAUNDRY',th:'ซักรีด พื้นที่เล็ก',c:'l',h:90,top:210,b:[[60,'M40@0 M40@4 BS@6']]},
+ {n:'14',en:'FAMILY LAUNDRY',th:'ซักรีด ครอบครัว',c:'l',h:150,top:215,b:[[80,'M40@0 M40@4 A30@5'],[80,'M40@0 M40@4 M30@8'],[60,'M40@0 M40@4 BS@6 BS@9 M40@12']]},
+ {n:'15',en:'TALL LAUNDRY',th:'ซักรีด ข้างเครื่องซ้อน',c:'l',h:210,top:230,b:[[60,'M40@0 M40@5 M40@10 BS@12 BD@15 M40@19']]},
+ {n:'16',en:'LARGE LAUNDRY',th:'ซักรีด ผนังยาว',c:'l',h:150,top:220,b:[[80,'N40@0 N40@5 W40@8 N40@13'],[80,'N40@0 N40@5 W40@8 N40@13'],[60,'N40@0 N40@5 BS@9 N40@13'],[80,'N40@0 A30@1 N40@13']]},
+ {n:'17',en:'UTILITY LAUNDRY',th:'ซักรีด อเนกประสงค์',c:'l',h:150,top:215,b:[[80,'M40@0 M40@4 A30@5'],[60,'M40@0 M40@4 M40@7 BS@9 M40@12 M40@14'],[80,'M40@0 M40@4 M40@7 M40@10 M40@14']]},
+ {n:'18',en:'SMALL STOREROOM',th:'ห้องเก็บของ เล็ก',c:'s',h:150,top:210,b:[[60,'M40@0 M40@4 M40@8 BS@10'],[60,'M40@0 M40@4 M40@8 BS@10'],[60,'M40@0 M40@4 M40@8 BS@10']]},
+ {n:'19',en:'FAMILY STOREROOM',th:'ห้องเก็บของ ครอบครัว',c:'s',h:210,top:230,b:[[60,'M40@0 A30@1 BS@11 BS@14 M40@17'],[80,'M40@0 M40@4 M40@7 M40@10 M40@13 M40@16'],[80,'M40@0 M40@4 M40@7 M40@10 M40@13 M40@16'],[80,'M40@0 M40@4 M40@7 M40@10 W40@13 M40@16'],[80,'M40@0 M40@4 M40@7 M40@10 M40@13 M40@16']]},
+ {n:'20',en:'CORNER STOREROOM',th:'ห้องเก็บของ มุมห้อง',c:'s',h:210,top:225,corner:1,b:[[80,'N40@0 N40@4 N40@8 N40@12 N40@16'],[80,'N40@0 A30@1 N40@12 N40@15'],[60,'N40@0 N40@4 N40@8 BS@10 BD@13']]},
+ {n:'21',en:'HOBBY STOREROOM',th:'ห้องงานอดิเรก',c:'s',h:210,top:230,b:[[60,'M40@0 M40@4 M40@8 BS@11 M40@14 M40@18'],[60,'M40@0 M40@4 M40@8 BS@11 M40@14 M40@18'],[60,'M40@0 M40@4 M40@8 BS@11 M40@14 M40@18'],[80,'M40@0 M40@4 M40@8 M40@12 M40@15 M40@18']]},
+ {n:'22',en:'BULK STOREROOM',th:'ห้องเก็บของ สต็อกบ้าน',c:'s',h:210,top:225,b:[[80,'M40@0 M40@4 M40@7 A30@8 M40@15'],[60,'M40@0 M40@4 M40@7 BS@9 M40@12 M40@15'],[80,'M40@0 M40@4 M40@7 M40@10 M40@15'],[80,'M40@0 M40@4 M40@7 W40@10 M40@15']]}
+];
+function parseCode(code){
+  const [k,sl]=code.split('@'), slot=+sl, d=+(k.replace(/^[A-Z]+/,''))||30;
+  const base={d:30,col:'w',hi:false,bk:'s',hk:'rack',slot};
+  if(k==='BS'||k==='BD') return Object.assign(base,{t:'basket',bk:k==='BS'?'s':'d',d:40});
+  const m={M:{t:'mel'},N:{t:'mel',col:'wn'},W:{t:'wire'},F:{t:'flat'},A:{t:'hang',hk:'rod'},R:{t:'hang',hk:'rack',d:40},P:{t:'peg'}}[k[0]];
+  return Object.assign(base,{d},m);
 }
-function renderPresets(){const p=$('presets');p.innerHTML='';Object.entries(PRESETS).forEach(([k,v])=>{const b=document.createElement('button');b.type='button';b.textContent=v.name;b.onclick=()=>applyPreset(k);p.appendChild(b)})}
+function ideaBays(idea){return idea.b.map(([w,codes])=>({w,items:codes.split(' ').map(c=>{const it=parseCode(c);it.id=uid++;normDraft(it);return it})}))}
+function applyIdea(idea,quiet){
+  S.railH=idea.h; S.railTop=idea.top; S.hw='w'; S.track=false; S.align='c';
+  S.bays=ideaBays(idea);
+  S.wall.w=Math.max(180,Math.ceil((totalW()+60)/10)*10); S.wall.h=Math.max(S.wall.h,idea.top+20);
+  S.idea=idea.n; S.sel=null; S.active=0; S.cur=null;
+  if(quiet) return;
+  buildRoom(); buildSystem(); setView('angle'); commit();
+  toast(`ใช้แบบไอเดีย ${idea.n} แล้ว แก้ไขต่อได้เลย`);
+}
+let ideaTab='all', ideaPick=null;
+function ideaImg(n,thumb){return `ideas/${thumb?'t/':''}idea-${n}.jpg`}
+function openIdeas(){ideaPick=null;renderIdeas();$('ideasModal').hidden=false}
+function renderIdeas(){
+  const list=$('ideasList'), det=$('ideaDetail');
+  $('ideaWarn').textContent=S.bays.some(b=>b.items.length)&&(S.cur?isDirty():!S.idea)?'แบบที่กำลังจัดอยู่ยังไม่ได้บันทึก ถ้าใช้แบบไอเดีย แบบเดิมจะถูกแทนที่':'';
+  if(ideaPick){
+    const it=IDEAS.find(i=>i.n===ideaPick); list.hidden=true; det.hidden=false; $('ideasTitle').textContent=`ไอเดีย ${it.n}`;
+    const bays=ideaBays(it), nItems=bays.reduce((a,b)=>a+b.items.length,0), tw=bays.reduce((a,b)=>a+b.w,0);
+    const combo=comboTxt(it.h);
+    det.innerHTML=`<div class="idetail"><img src="${ideaImg(it.n)}" alt="ภาพไอเดีย ${it.en}"><div>
+      <h4>${it.th}</h4><div class="meta"><span>${it.n} · ${it.en}</span>
+      <span>ช่อง <b>${bays.map(b=>b.w).join(' + ')} ซม.</b> (กว้างรวม ${tw})</span>
+      <span>รางรับชั้น <b>${it.h} ซม.${combo?' ('+combo+')':''}</b> ${bays.length+1} ตำแหน่ง · ปลายรางสูง ${it.top} ซม.</span>
+      <span>ชั้น ตะกร้า ราว <b>${nItems} ชิ้น</b></span>
+      ${it.corner?'<span>ภาพเป็นห้องมุม แอปจัดให้บนผนังหลัก 1 ด้าน</span>':''}
+      <span>ตะกร้ามีขนาดกว้าง 60 ซม. ช่องที่มีตะกร้าจึงเป็นช่อง 60</span></div>
+      <div class="btns"><button class="btn primary-s" id="ideaUse" type="button">ใช้แบบนี้</button><button class="btn ghost" id="ideaBack" type="button">ดูแบบอื่น</button></div></div></div>`;
+    $('ideaUse').onclick=()=>{applyIdea(it);$('ideasModal').hidden=true};
+    $('ideaBack').onclick=()=>{ideaPick=null;renderIdeas()};
+    return;
+  }
+  $('ideasTitle').textContent='แบบไอเดีย'; list.hidden=false; det.hidden=true;
+  const tabs=$('ideaTabs'); tabs.innerHTML='';
+  Object.entries(IDEA_CATS).forEach(([k,v])=>{const n=k==='all'?IDEAS.length:IDEAS.filter(i=>i.c===k).length;tabs.appendChild(chip(`${v} <small style="font-weight:400">${n}</small>`,ideaTab===k,false,()=>{ideaTab=k;renderIdeas()}))});
+  const g=$('ideaGrid'); g.innerHTML='';
+  IDEAS.filter(i=>ideaTab==='all'||i.c===ideaTab).forEach(it=>{
+    const b=document.createElement('button'); b.type='button'; b.className='icard'+(S.idea===it.n?' cur':'');
+    b.innerHTML=`<img src="${ideaImg(it.n,1)}" alt="" loading="lazy"><span>${it.n} ${it.th}<small>${it.en} · ${it.b.length} ช่อง · ราง ${it.h}</small></span>`;
+    b.onclick=()=>{ideaPick=it.n;renderIdeas();$('ideasModal').querySelector('.box').scrollTop=0}; g.appendChild(b);
+  });
+}
+function renderIdeaRef(){
+  const box=$('ideaRef'), it=S.idea&&IDEAS.find(i=>i.n===S.idea);
+  if(!it){box.innerHTML='<div class="empty">ยังไม่ได้เลือกแบบไอเดีย เริ่มจากภาพตัวอย่าง แล้วเพิ่มหรือแก้ไขต่อได้</div>';return}
+  box.innerHTML=`<div class="iref"><img src="${ideaImg(it.n,1)}" alt=""><div><b>${it.n} ${it.th}</b><small>${it.en} · โครงสร้างเริ่มต้นจากภาพนี้ แก้ไขต่อได้ตามต้องการ</small></div></div>`;
+  box.querySelector('.iref').onclick=()=>{ideaPick=it.n;renderIdeas();$('ideasModal').hidden=false};
+}
+['ideaBtn','ideaBtn2'].forEach(id=>$(id).onclick=openIdeas);
+$('navIdeas').onclick=e=>{e.preventDefault();openIdeas()};
+$('ideasClose').onclick=()=>{$('ideasModal').hidden=true};
 
 /* ---------- Step 4: list ---------- */
 function renderList(A){
@@ -515,7 +589,7 @@ $('clearNo').onclick=()=>{$('clearConfirm').hidden=true};
 $('clearYes').onclick=()=>{S.bays.forEach(b=>b.items=[]);S.sel=null;$('clearConfirm').hidden=true;buildSystem();commit();toast('ล้างสินค้าแล้ว')};
 
 function renderWarn(A){A=A||analyse();const w=$('warnbar');w.hidden=!A.warns.length;w.textContent=A.warns.length?'⚠ '+A.warns[0]+(A.warns.length>1?` (+${A.warns.length-1})`:''):''}
-function renderAll(){const A=analyse();renderStep1();renderStep2();renderSel();renderList(A);renderWarn(A);if(mode2d)render2D();updCurUI()}
+function renderAll(){const A=analyse();renderIdeaRef();renderStep1();renderStep2();renderSel();renderList(A);renderWarn(A);if(mode2d)render2D();updCurUI()}
 
 /* ---------- 2D elevation with dimensions ---------- */
 let mode2d=false;
@@ -688,12 +762,12 @@ async function doExport(kind){
 }
 $('pngBtn').onclick=()=>doExport('png'); $('pdfBtn').onclick=()=>doExport('pdf');
 $('exportClose').onclick=()=>{$('exportModal').hidden=true};
-window.__flexi={S:()=>S,bom,analyse,buildPages,listText};
+window.__flexi={S:()=>S,bom,analyse,buildPages,listText,IDEAS:()=>IDEAS,applyIdea:n=>applyIdea(IDEAS.find(i=>i.n===n))};
 
 /* ---------- Saved designs (browser; signed-in storage when available) ---------- */
 const LKEY=KEY+'-designs';
 const store={mode:'local',col:null,list:[],ready:false,err:null};
-function stateOf(){return JSON.parse(JSON.stringify({wall:S.wall,railH:S.railH,railTop:S.railTop,hw:S.hw,track:S.track,align:S.align,bays:S.bays}))}
+function stateOf(){return JSON.parse(JSON.stringify({wall:S.wall,railH:S.railH,railTop:S.railTop,hw:S.hw,track:S.track,align:S.align,bays:S.bays,idea:S.idea||null}))}
 const sigOf=st=>JSON.stringify(st);
 function isDirty(){return !S.cur||S.cur.sig!==sigOf(stateOf())}
 function localList(){try{return JSON.parse(localStorage.getItem(LKEY)||'[]')}catch(e){return []}}
@@ -754,17 +828,14 @@ $('myBtn').onclick=()=>{delArm=null;renderDesigns();$('designsModal').hidden=fal
 $('dSaveNew').onclick=()=>saveDesign(true); $('dSaveOver').onclick=()=>saveDesign(false);
 $('dCancel').onclick=()=>{$('saveModal').hidden=true}; $('dClose').onclick=()=>{$('designsModal').hidden=true}; $('dNew').onclick=newDesign;
 $('saveForm').addEventListener('submit',e=>{e.preventDefault();saveDesign(!S.cur)});
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){$('saveModal').hidden=true;$('designsModal').hidden=true}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){$('saveModal').hidden=true;$('designsModal').hidden=true;$('ideasModal').hidden=true}});
 setInterval(()=>{if(S.cur)updCurUI()},1500);
 initStore();
 
 /* ---------- Boot ---------- */
-if(!S.bays.some(b=>b.items.length)&&!localStorage.getItem(KEY+'-seen')){ // first visit: show a filled example
-  try{localStorage.setItem(KEY+'-seen','1')}catch(e){}
-  const p=PRESETS.wardrobe; S.railH=p.railH;S.railTop=p.railTop;S.wall.w=Math.max(S.wall.w,260);
-  S.bays=p.bays.map(b=>({w:b.w,items:b.items.map(([t,slot,o])=>{const it=Object.assign({t,d:30,col:'w',hi:false,bk:'s',hk:'rack'},o||{},{id:uid++,slot});normDraft(it);return it})}));
-}
-renderPresets(); resize(); buildRoom(); buildSystem(); renderAll(); setView('angle');
+let firstVisit=false; try{firstVisit=!S.bays.some(b=>b.items.length)&&!localStorage.getItem(KEY+'-seen');localStorage.setItem(KEY+'-seen','1')}catch(e){}
+if(firstVisit) applyIdea(IDEAS[8],true); // first visit opens on a filled example
+resize(); buildRoom(); buildSystem(); renderAll(); setView('angle');
 try{if(localStorage.getItem(KEY+'-view')==='2d')setMode(true)}catch(e){}
 (function loop(){requestAnimationFrame(loop);if(mode2d)return;controls.update();renderer.render(scene,camera)})();
 })();
