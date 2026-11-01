@@ -13,6 +13,7 @@
 .note2{font-size:12px;color:var(--muted);margin-top:8px}
 .list .nm code{font:inherit;color:var(--navy);font-weight:600}
 .nudge.five{grid-template-columns:repeat(4,1fr)}
+#decorBtns{grid-template-columns:repeat(3,1fr)}
 /* idea gallery */
 .modal .box.ideas{width:min(1040px,100%);gap:12px}
 .itabs{display:flex;flex-wrap:wrap;gap:6px}
@@ -73,7 +74,7 @@
           <button data-v="front">ด้านหน้า</button>
           <button data-v="angle" class="on">มุมเอียง</button>
         </div>
-        <div class="grp"><button id="slotBtn" class="on">ช่องราง</button></div>
+        <div class="grp"><button id="slotBtn" class="on">ช่องราง</button><button id="decoBtn" class="on">ของตกแต่ง</button></div>
       </div>
       <div class="warnbar" id="warnbar" hidden></div>
       <div class="hint" id="hint">แตะชิ้นงานเพื่อเลือก · ลากขึ้นลงทีละ 10 ซม. หรือลากไปช่องข้าง ๆ · ลากที่ว่างเพื่อหมุนมุมมอง</div>
@@ -117,6 +118,9 @@
       <div class="step" id="workspace-step-3">
         <div class="step-h"><span class="num">3</span><h2>จัดตำแหน่ง</h2></div>
         <div id="selArea"></div>
+        <div class="label">ของตกแต่ง · ใช้ประกอบภาพ ไม่รวมในรายการสินค้า</div>
+        <div class="decor" id="decorBtns"></div>
+        <div class="btns"><button class="btn ghost" id="autoDeco" type="button">ใส่ของบนชั้นอัตโนมัติ</button><button class="btn ghost" id="clearDeco" type="button">เอาของตกแต่งออก</button></div>
         <div class="label">ภาพไอเดียที่ใช้อ้างอิง</div>
         <div id="ideaRef"></div>
         <button class="ideabtn" id="ideaBtn2" type="button">✦ เลือกแบบไอเดีย 22 แบบ</button>

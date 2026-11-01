@@ -279,6 +279,7 @@ textarea.copybox{width:100%;height:130px;margin-top:8px;font-size:12.5px;border:
 .note2{font-size:12px;color:var(--muted);margin-top:8px}
 .list .nm code{font:inherit;color:var(--navy);font-weight:600}
 .nudge.five{grid-template-columns:repeat(4,1fr)}
+#decorBtns{grid-template-columns:repeat(3,1fr)}
 /* idea gallery */
 .modal .box.ideas{width:min(1040px,100%);gap:12px}
 .itabs{display:flex;flex-wrap:wrap;gap:6px}
@@ -339,7 +340,7 @@ textarea.copybox{width:100%;height:130px;margin-top:8px;font-size:12.5px;border:
           <button data-v="front">ด้านหน้า</button>
           <button data-v="angle" class="on">มุมเอียง</button>
         </div>
-        <div class="grp"><button id="slotBtn" class="on">ช่องราง</button></div>
+        <div class="grp"><button id="slotBtn" class="on">ช่องราง</button><button id="decoBtn" class="on">ของตกแต่ง</button></div>
       </div>
       <div class="warnbar" id="warnbar" hidden></div>
       <div class="hint" id="hint">แตะชิ้นงานเพื่อเลือก · ลากขึ้นลงทีละ 10 ซม. หรือลากไปช่องข้าง ๆ · ลากที่ว่างเพื่อหมุนมุมมอง</div>
@@ -383,6 +384,9 @@ textarea.copybox{width:100%;height:130px;margin-top:8px;font-size:12.5px;border:
       <div class="step" id="workspace-step-3">
         <div class="step-h"><span class="num">3</span><h2>จัดตำแหน่ง</h2></div>
         <div id="selArea"></div>
+        <div class="label">ของตกแต่ง · ใช้ประกอบภาพ ไม่รวมในรายการสินค้า</div>
+        <div class="decor" id="decorBtns"></div>
+        <div class="btns"><button class="btn ghost" id="autoDeco" type="button">ใส่ของบนชั้นอัตโนมัติ</button><button class="btn ghost" id="clearDeco" type="button">เอาของตกแต่งออก</button></div>
         <div class="label">ภาพไอเดียที่ใช้อ้างอิง</div>
         <div id="ideaRef"></div>
         <button class="ideabtn" id="ideaBtn2" type="button">✦ เลือกแบบไอเดีย 22 แบบ</button>
@@ -503,7 +507,7 @@ function brDepth(it){return it.t==='rack'?40:it.d}
 function kindOf(it){return it.t==='hang'?(it.hk==='rod'?'rod':'rack'):it.t}
 
 /* ---------- State ---------- */
-const DEF=()=>({wall:{w:240,h:250,c:WALLC[0]},railH:150,railTop:200,hw:'w',track:false,align:'c',
+const DEF=()=>({wall:{w:240,h:250,c:WALLC[0]},railH:150,railTop:200,hw:'w',track:false,align:'c',decor:[],
   bays:[{w:80,items:[]},{w:80,items:[]}],active:0,
   draft:{t:'mel',d:30,col:'w',hi:false,bk:'s',hk:'rack'}});
 let S=DEF(); S.sel=null; S.cur=null;
@@ -733,11 +737,138 @@ function buildSystem(A){
         const t=pegTex().clone(); t.needsUpdate=true; t.repeat.set((w-1)/2.5,40/2.5);
         const m=box(w-1,40,1.5,[white,white,white,white,new THREE.MeshStandardMaterial({map:t,roughness:.5}),white]); m.position.set(cx,y-20+3,1.6+.75); g.add(m);
       }
+      if(showDeco&&it.deco&&it.deco!=='none') itemDeco3D(g,it,bay,bi,cx,w,y,K);
       const bad=A.bad.has(it.id), sel=S.sel===it.id;
       if(bad||sel){const bh=new THREE.BoxHelper(g,bad?0xc8361f:0xff781f);bh.material.depthTest=false;bh.renderOrder=5;sysG.add(g);sysG.add(bh)} else sysG.add(g);
       g.traverse(o=>{if(o.isMesh){o.userData.id=it.id;pickables.push(o)}});
     });
   });
+  if(showDeco) (S.decor||[]).forEach(d=>{const g=floorDeco3D(d);if(!g)return;sysG.add(g);
+    if(S.selD===d.id){const bh=new THREE.BoxHelper(g,0x1f7a4d);bh.material.depthTest=false;bh.renderOrder=5;sysG.add(bh)}
+    g.traverse(o=>{if(o.isMesh){o.userData.did=d.id;pickables.push(o)}})});
+}
+
+/* ---------- Decor: props for the picture only, never in the product list ---------- */
+let showDeco=true;
+const FLOOR={fridge:{n:'ตู้เย็น',w:60},washer:{n:'เครื่องซักผ้า',w:60},stack:{n:'เครื่องซัก + อบ ซ้อน',w:60},plant:{n:'ต้นไม้',w:40},hamper:{n:'ตะกร้าผ้า',w:44},fbox:{n:'กล่องเก็บของ',w:56}};
+const DECO_OPTS={shelf:[['none','ไม่มี'],['towel','ผ้าพับ'],['box','กล่องใส'],['book','หนังสือ'],['plant','ต้นไม้'],['shoe','รองเท้า']],hang:[['none','ไม่มี'],['clothes','เสื้อผ้า']],basket:[['none','ไม่มี'],['fill','ผ้าในตะกร้า']]};
+const PAL=['#e9e4da','#c9b9a3','#8fa58f','#5f7389','#d7cfc4','#a4664a','#33404f','#b9c7d6','#f2efe9','#7d8b6a'];
+function decoGroup(it){return it.t==='hang'?'hang':it.t==='basket'?'basket':BOARD.includes(it.t)?'shelf':null}
+function rng(seed){let x=(seed*9301+49297)%233280||7;return()=>{x=(x*9301+49297)%233280;return x/233280}}
+const mStd=(c,o)=>new THREE.MeshStandardMaterial(Object.assign({color:c,roughness:.8},o||{}));
+function spaceAbove(bay,it){const ys=bay.items.filter(o=>o.slot<it.slot).map(o=>o.slot+span(o)-1);return ys.length?PITCH*(it.slot-Math.max(...ys))-4:40}
+function spaceBelow(bay,it){const ys=bay.items.filter(o=>o.slot>it.slot).map(o=>o.slot);return ys.length?PITCH*(Math.min(...ys)-it.slot)-6:slotY(it.slot)-4}
+function itemDeco3D(g,it,bay,bi,cx,w,y,K){
+  const r=rng(it.id*31+bi), x0=cx-w/2, top=y+(K==='mel'?1.6:K==='basket'?0:2.5), H=Math.max(6,Math.min(spaceAbove(bay,it),34)), D=it.d||30;
+  const add=m=>{m.castShadow=true;m.receiveShadow=true;g.add(m);return m};
+  if(it.deco==='clothes'&&(K==='rod'||K==='rack')){
+    const rodY=K==='rod'?y-5:y-1, zc=K==='rod'?Math.max(1.6+D*.6,23):21.6, L0=Math.max(25,Math.min(spaceBelow(bay,it),105));
+    const n=Math.floor((w-8)/4.6);
+    for(let i=0;i<n;i++){const L=L0*(.62+r()*.38), col=PAL[Math.floor(r()*PAL.length)];
+      const m=add(box(1.4,L,40,mStd(col)));m.position.set(x0+5+i*4.6,rodY-2-L/2,zc);
+      const hk=add(box(.5,2.6,22,mStd('#c9a77c')));hk.position.set(x0+5+i*4.6,rodY-1.6,zc)}
+    return;
+  }
+  if(it.deco==='fill'&&K==='basket'){const h=(it.bk==='d'?28:14)-5;
+    for(let i=0;i<2;i++){const m=add(box((w-10)/2-1,h,33,mStd(PAL[Math.floor(r()*PAL.length)])));m.position.set(x0+5+(w-10)/4+i*(w-10)/2,y-4-h/2-1,1.6+20)}return}
+  if(K==='mel'||K==='wire'||K==='flat'){
+    if(it.deco==='towel'){const n=Math.max(1,Math.floor(w/29));for(let i=0;i<n;i++){const layers=Math.max(1,Math.min(4,Math.floor(H/6)));const col=PAL[Math.floor(r()*4)];
+      for(let l=0;l<layers;l++){const m=add(box(25,5.4,D-8,mStd(l%2?col:'#f4f1ea',{roughness:1})));m.position.set(x0+2+(w/n)*(i+.5),top+2.8+l*5.6,1.6+D/2)}}}
+    else if(it.deco==='box'){const n=Math.max(1,Math.floor(w/29)), h=Math.max(8,Math.min(H-2,24));
+      for(let i=0;i<n;i++){const xx=x0+(w/n)*(i+.5);
+        const m=add(box(w/n-3,h,D-4,mStd('#dfe7ef',{transparent:true,opacity:.5,roughness:.2})));m.position.set(xx,top+h/2,1.6+D/2);
+        const lid=add(box(w/n-2.4,1.6,D-3.4,mStd('#9aa6b4',{roughness:.5})));lid.position.set(xx,top+h+.8,1.6+D/2);
+        const c=add(box(w/n-8,h*.7,D-10,mStd(PAL[Math.floor(r()*PAL.length)],{roughness:1})));c.position.set(xx,top+h*.35+.2,1.6+D/2)}}
+    else if(it.deco==='book'){let x=x0+4;const end=x0+w*.72;while(x<end){const t=2+r()*2.2,h=Math.min(H,16+r()*9);const m=add(box(t,h,Math.min(D-6,20),mStd(PAL[Math.floor(r()*PAL.length)])));m.position.set(x+t/2,top+h/2,1.6+Math.min(D-6,20)/2+2);x+=t+.3}
+      const pot=add(new THREE.Mesh(new THREE.CylinderGeometry(5,4,8,16),mStd('#f1eee8')));pot.position.set(x0+w*.86,top+4,1.6+D/2);
+      const lf=add(new THREE.Mesh(new THREE.SphereGeometry(Math.min(8,H/2),14,10),mStd('#5d8a4e')));lf.position.set(x0+w*.86,top+8+Math.min(6,H/3),1.6+D/2)}
+    else if(it.deco==='plant'){[.28,.7].forEach((f,i)=>{const pot=add(new THREE.Mesh(new THREE.CylinderGeometry(6,4.8,10,16),mStd(i?'#d9c2a5':'#f1eee8')));pot.position.set(x0+w*f,top+5,1.6+D/2);
+      const lf=add(new THREE.Mesh(new THREE.SphereGeometry(Math.min(10,H/2.2),14,10),mStd(i?'#6f9a5a':'#4f7d45')));lf.position.set(x0+w*f,top+10+Math.min(7,H/3),1.6+D/2)})}
+    else if(it.deco==='shoe'){const n=Math.floor((w-4)/17);for(let i=0;i<n;i++){const col=PAL[[1,5,6,8][Math.floor(r()*4)]];
+      for(let k=0;k<2;k++){const m=add(box(6.5,6+r()*3,Math.min(D-4,26),mStd(col,{roughness:.6})));m.position.set(x0+5+i*17+k*7.5,top+4,1.6+Math.min(D-4,26)/2+1)}}}
+  }
+}
+function floorDeco3D(d){
+  const g=new THREE.Group(), k=d.k, x=d.x; g.position.set(x,0,0);
+  const add=(m,px,py,pz)=>{m.position.set(px,py,pz);m.castShadow=true;m.receiveShadow=true;g.add(m);return m};
+  const white=mStd('#f4f5f6',{roughness:.35,metalness:.1}), dark=mStd('#3c4652',{roughness:.3,metalness:.2});
+  const washer=(oy,dryer)=>{add(box(60,84,58,white),30,oy+42,31);add(box(60,10,1,mStd('#e4e7ea')),30,oy+76,60.4);
+    const ring=new THREE.Mesh(new THREE.CylinderGeometry(17,17,2,32),mStd('#c9ced4',{metalness:.5,roughness:.3}));ring.rotation.x=Math.PI/2;add(ring,30,oy+38,60.5);
+    const glass=new THREE.Mesh(new THREE.CylinderGeometry(13,13,2.4,32),mStd(dryer?'#4a5562':'#2d3b4a',{roughness:.15,metalness:.3}));glass.rotation.x=Math.PI/2;add(glass,30,oy+38,60.8);
+    add(box(14,4,1,dark),44,oy+76,61)};
+  if(k==='fridge'){add(box(60,180,64,mStd('#e6e9ec',{metalness:.35,roughness:.3})),30,90,34);add(box(60,.8,1,dark),30,118,66.2);
+    add(box(2,40,3,mStd('#b9c0c7',{metalness:.6})),52,145,67.5);add(box(2,30,3,mStd('#b9c0c7',{metalness:.6})),52,95,67.5)}
+  else if(k==='washer') washer(0,false);
+  else if(k==='stack'){washer(0,false);washer(85,true)}
+  else if(k==='plant'){add(new THREE.Mesh(new THREE.CylinderGeometry(17,13,34,24),mStd('#e8e2d8')),20,17,22);
+    const r=rng(d.id*7);for(let i=0;i<7;i++){add(new THREE.Mesh(new THREE.SphereGeometry(11+r()*6,14,10),mStd(['#4f7d45','#5d8a4e','#6f9a5a'][i%3])),20+(r()-.5)*24,52+r()*40,22+(r()-.5)*18)}}
+  else if(k==='hamper'){add(new THREE.Mesh(new THREE.CylinderGeometry(21,18,48,24,1,true),mStd('#c49a6c',{side:THREE.DoubleSide,roughness:1})),22,24,24);
+    add(new THREE.Mesh(new THREE.CylinderGeometry(18,18,2,24),mStd('#a87f55')),22,2,24);add(box(26,10,22,mStd('#efe9df',{roughness:1})),22,46,24)}
+  else if(k==='fbox'){add(box(56,32,42,mStd('#dfe7ef',{transparent:true,opacity:.5,roughness:.2})),28,16,23);add(box(57,2,43,mStd('#9aa6b4')),28,33,23);
+    add(box(48,24,34,mStd(PAL[d.id%PAL.length],{roughness:1})),28,12.5,23)}
+  else return null;
+  return g;
+}
+function decoW(d){return (FLOOR[d.k]||{w:50}).w}
+function addFloor(k){
+  const W=S.wall.w, w=FLOOR[k].w, used=(S.decor||[]).map(d=>[d.x,d.x+decoW(d)]);
+  let x=null; for(let c=0;c<=W-w;c+=5){if(used.every(([a,b])=>c+w<=a||c>=b)){x=c;break}}
+  if(x==null) x=Math.max(0,Math.round((W-w)/2));
+  const d={id:uid++,k,x}; (S.decor=S.decor||[]).push(d); S.sel=null; S.selD=d.id; buildSystem(); commit(); toast(`เพิ่ม${FLOOR[k].n}แล้ว ลากเพื่อย้ายได้`);
+}
+function autoDecorate(cat){
+  cat=cat||'g';
+  S.bays.forEach((bay,bi)=>{const items=[...bay.items].sort((a,b)=>a.slot-b.slot);let k=bi;
+    items.forEach((it,idx)=>{const gp=decoGroup(it);
+      if(gp==='hang'){it.deco='clothes';return} if(gp==='basket'){it.deco='fill';return} if(gp!=='shelf'){it.deco='none';return}
+      const y=slotY(it.slot);
+      if(cat==='s'){it.deco=(k++)%4===3?'towel':'box';return}
+      if(cat==='l'){it.deco=idx===0?'box':['towel','box'][(k++)%2];return}
+      if(y<75){it.deco='shoe';return}
+      it.deco=idx===0?'box':['towel','book','plant','box'][(k++)%4];
+    })});
+}
+function decoBtnsHTML(){
+  const ic={fridge:'<rect x="8" y="2" width="14" height="26" rx="2"/><path d="M8 11h14M18 5v4M18 14v6"/>',washer:'<rect x="6" y="4" width="18" height="22" rx="2"/><circle cx="15" cy="17" r="5"/><path d="M6 9h18"/>',
+    stack:'<rect x="8" y="1" width="14" height="13" rx="1.5"/><rect x="8" y="16" width="14" height="13" rx="1.5"/><circle cx="15" cy="8" r="3"/><circle cx="15" cy="23" r="3"/>',
+    plant:'<path d="M10 20h10l-2 8h-6z"/><path d="M15 20c0-6-6-8-6-14 4 1 6 5 6 9 0-4 3-8 7-9 0 6-7 8-7 14"/>',hamper:'<path d="M8 10h14l-2 18H10z"/><path d="M8 10c2-4 12-4 14 0M10 16h10M11 22h8"/>',fbox:'<rect x="5" y="11" width="20" height="15" rx="1.5"/><path d="M4 8h22v3H4z"/>'};
+  return Object.entries(FLOOR).map(([k,v])=>`<button type="button" data-fd="${k}"><svg width="30" height="30" viewBox="0 0 30 30" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true">${ic[k]}</svg>${v.n}</button>`).join('');
+}
+function renderDecoUI(){
+  const b=$('decorBtns'); if(!b.dataset.ok){b.innerHTML=decoBtnsHTML();b.dataset.ok=1;b.querySelectorAll('[data-fd]').forEach(x=>x.onclick=()=>addFloor(x.dataset.fd))}
+  $('decoBtn').classList.toggle('on',showDeco);
+}
+function decoTxt2D(it,xL,w,y,K,bay,X,Y){
+  if(!showDeco||!it.deco||it.deco==='none') return '';
+  const r=rng(it.id*31), H=Math.max(6,Math.min(spaceAbove(bay,it),30)); let s='';
+  const top=y+(K==='mel'?1.6:2.5);
+  if(it.deco==='clothes'){const rodY=K==='rod'?y-5:y-1,L0=Math.max(25,Math.min(spaceBelow(bay,it),105));for(let x=xL+4;x<xL+w-4;x+=4.6){const L=L0*(.62+r()*.38);s+=`<rect x="${X(x)}" y="${Y(rodY-1)}" width="3.6" height="${L}" rx="1" fill="${PAL[Math.floor(r()*PAL.length)]}" opacity=".9"/>`}}
+  else if(it.deco==='fill'){const h=(it.bk==='d'?28:14)-6;s+=`<rect x="${X(xL+5)}" y="${Y(y-4)}" width="${w-10}" height="${h}" fill="${PAL[it.id%PAL.length]}" opacity=".75"/>`}
+  else if(it.deco==='towel'){const n=Math.max(1,Math.floor(w/29));for(let i=0;i<n;i++){const ly=Math.max(1,Math.min(4,Math.floor(H/6)));for(let l=0;l<ly;l++)s+=`<rect x="${X(xL+2+(w/n)*(i+.5)-12.5)}" y="${Y(top+5.6*(l+1))}" width="25" height="5.2" rx="1.5" fill="${l%2?PAL[i%4]:'#f4f1ea'}" stroke="#cfc6b8" stroke-width=".3"/>`}}
+  else if(it.deco==='box'){const n=Math.max(1,Math.floor(w/29)),h=Math.max(8,Math.min(H-2,24));for(let i=0;i<n;i++)s+=`<rect x="${X(xL+(w/n)*i+1.5)}" y="${Y(top+h)}" width="${w/n-3}" height="${h}" fill="#dfe7ef" fill-opacity=".7" stroke="#9aa6b4" stroke-width=".4"/><rect x="${X(xL+(w/n)*i+1.2)}" y="${Y(top+h+1.6)}" width="${w/n-2.4}" height="1.6" fill="#9aa6b4"/>`}
+  else if(it.deco==='book'){let x=xL+4;while(x<xL+w*.72){const t=2+r()*2.2,h=Math.min(H,16+r()*9);s+=`<rect x="${X(x)}" y="${Y(top+h)}" width="${t}" height="${h}" fill="${PAL[Math.floor(r()*PAL.length)]}"/>`;x+=t+.3}}
+  else if(it.deco==='plant'){[.28,.7].forEach(f=>{s+=`<path d="M${X(xL+w*f-6)} ${Y(top+10)}h12l-1.5 10h-9z" fill="#f1eee8" stroke="#c9c1b4" stroke-width=".3"/><circle cx="${X(xL+w*f)}" cy="${Y(top+10+Math.min(8,H/3))}" r="${Math.min(9,H/2.4)}" fill="#5d8a4e"/>`})}
+  else if(it.deco==='shoe'){const n=Math.floor((w-4)/17);for(let i=0;i<n;i++)s+=`<rect x="${X(xL+2+i*17)}" y="${Y(top+7)}" width="14" height="7" rx="2" fill="${PAL[[1,5,6,8][i%4]]}"/>`}
+  return `<g pointer-events="none">${s}</g>`;
+}
+function floor2D(d,X,Y){
+  const w=decoW(d), x=d.x, sel=S.selD===d.id; let s=`<g data-did="${d.id}" style="cursor:grab">`;
+  const st=`stroke="${sel?'#1f7a4d':'#8a94a3'}" stroke-width="${sel?1.2:.5}"`;
+  if(d.k==='fridge') s+=`<rect x="${X(x)}" y="${Y(180)}" width="60" height="180" rx="2" fill="#eceff2" ${st}/><line x1="${X(x)}" x2="${X(x+60)}" y1="${Y(118)}" y2="${Y(118)}" stroke="#8a94a3" stroke-width=".5"/><rect x="${X(x+50)}" y="${Y(165)}" width="2" height="40" fill="#b9c0c7"/>`;
+  else if(d.k==='washer'||d.k==='stack'){[0,d.k==='stack'?85:null].forEach(oy=>{if(oy==null)return;s+=`<rect x="${X(x)}" y="${Y(oy+84)}" width="60" height="84" rx="2" fill="#f4f5f6" ${st}/><circle cx="${X(x+30)}" cy="${Y(oy+38)}" r="15" fill="#3a4a5a" stroke="#c9ced4" stroke-width="2.5"/><line x1="${X(x)}" x2="${X(x+60)}" y1="${Y(oy+72)}" y2="${Y(oy+72)}" stroke="#c9ced4" stroke-width=".5"/>`})}
+  else if(d.k==='plant') s+=`<path d="M${X(x+3)} ${Y(34)}h34l-4 34h-26z" fill="#e8e2d8" ${st}/><circle cx="${X(x+20)}" cy="${Y(62)}" r="18" fill="#5d8a4e"/><circle cx="${X(x+10)}" cy="${Y(78)}" r="12" fill="#4f7d45"/><circle cx="${X(x+30)}" cy="${Y(82)}" r="12" fill="#6f9a5a"/>`;
+  else if(d.k==='hamper') s+=`<path d="M${X(x+1)} ${Y(48)}h42l-3 48h-36z" fill="#c49a6c" ${st}/><rect x="${X(x+9)}" y="${Y(54)}" width="26" height="8" rx="3" fill="#efe9df"/>`;
+  else if(d.k==='fbox') s+=`<rect x="${X(x)}" y="${Y(32)}" width="56" height="32" fill="#dfe7ef" fill-opacity=".75" ${st}/><rect x="${X(x-.5)}" y="${Y(34)}" width="57" height="2" fill="#9aa6b4"/>`;
+  return s+'</g>';
+}
+function renderSelDeco(){
+  const a=$('selArea'), d=(S.decor||[]).find(x=>x.id===S.selD); if(!d) return false;
+  a.innerHTML=`<div class="selcard deco"><div class="t">${FLOOR[d.k].n}<small>ของตกแต่ง ไม่รวมในรายการสินค้า · ห่างจากผนังซ้าย ${d.x} ซม.</small></div>
+    <div class="nudge"><button data-m="-10" type="button">◀ 10</button><button data-m="-1" type="button">◀ 1</button><button data-m="1" type="button">1 ▶</button><button data-m="10" type="button">10 ▶</button></div>
+    <div class="btns"><button class="btn danger" id="delDeco" type="button">ลบของตกแต่งนี้</button></div></div>`;
+  a.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{d.x=Math.max(0,Math.min(S.wall.w-decoW(d),d.x+ +b.dataset.m));buildSystem();commit()});
+  $('delDeco').onclick=()=>{S.decor=S.decor.filter(x=>x.id!==d.id);S.selD=null;buildSystem();commit();toast('ลบของตกแต่งแล้ว')};
+  return true;
 }
 
 let camMode='angle';
@@ -766,6 +897,9 @@ function onDown(e){
   const hit=ray.intersectObjects(pickables,false)[0];
   downAt={x:e.clientX,y:e.clientY,hit:!!hit};
   if(!hit) return;
+  if(hit.object.userData.did!=null){const d=S.decor.find(x=>x.id===hit.object.userData.did);if(!d)return;
+    controls.enabled=false;const p=planeHit(e,hit.point.z)||hit.point;drag={did:d.id,z:hit.point.z,dx:p.x-d.x,moved:false};
+    S.sel=null;S.selD=d.id;buildSystem();renderSel();renderer.domElement.setPointerCapture(e.pointerId);return}
   const id=hit.object.userData.id, f=findItem(id); if(!f) return;
   controls.enabled=false;
   const z=hit.point.z, p=planeHit(e,z)||hit.point;
@@ -775,13 +909,15 @@ function onDown(e){
 }
 renderer.domElement.addEventListener('pointermove',e=>{
   if(!drag) return; const p=planeHit(e,drag.z); if(!p) return;
+  if(drag.did!=null){const d=S.decor.find(x=>x.id===drag.did);if(!d)return;const nx=Math.max(0,Math.min(S.wall.w-decoW(d),Math.round((p.x-drag.dx)/5)*5));
+    if(nx!==d.x){d.x=nx;drag.moved=true;buildSystem();renderSel(true)}return}
   const f=findItem(drag.id); if(!f) return;
   const s=Math.round((S.railTop-5-(p.y-drag.dy))/PITCH), b=bayAt(p.x);
   moveTo(f,b<0?f.b:b,s,true);
 });
 function endDrag(e){
   if(drag){controls.enabled=true;if(drag.moved){commit()}drag=null;return}
-  if(downAt&&!downAt.hit&&e&&Math.hypot(e.clientX-downAt.x,e.clientY-downAt.y)<5&&S.sel!=null){S.sel=null;buildSystem();renderSel()}
+  if(downAt&&!downAt.hit&&e&&Math.hypot(e.clientX-downAt.x,e.clientY-downAt.y)<5&&(S.sel!=null||S.selD!=null)){S.sel=null;S.selD=null;buildSystem();renderSel()}
   downAt=null;
 }
 renderer.domElement.addEventListener('pointerup',endDrag);
@@ -800,7 +936,7 @@ function toast(t){const el=$('toast');el.textContent=t;el.hidden=false;clearTime
 function chip(label,on,dis,fn,cls){const b=document.createElement('button');b.type='button';b.className='chip'+(on?' on':'')+(cls?' '+cls:'');b.innerHTML=label;b.disabled=!!dis;b.onclick=fn;return b}
 function photo(ph,dot){return `<img src="photos/${ph}.jpg" alt="" loading="lazy">${dot?`<i style="background:${dot}"></i>`:''}`}
 function commit(){save();renderAll()}
-function select(id,quiet){S.sel=id;const f=findItem(id);if(f)S.active=f.b;buildSystem();if(mode2d)render2D();renderSel();renderBays();renderBayPick();if(!quiet&&window.innerWidth<=900){}}
+function select(id,quiet){S.sel=id;S.selD=null;const f=findItem(id);if(f)S.active=f.b;buildSystem();if(mode2d)render2D();renderSel();renderBays();renderBayPick();if(!quiet&&window.innerWidth<=900){}}
 
 /* ---------- Step 1: wall & rails ---------- */
 function renderStep1(){
@@ -915,13 +1051,14 @@ $('addAllBtn').onclick=()=>addItem(true);
 /* ---------- Step 3: selection ---------- */
 function renderSel(liveOnly){
   const a=$('selArea'); const f=S.sel!=null?findItem(S.sel):null;
+  if(!f&&S.selD!=null){if(liveOnly&&a.querySelector('.selcard.deco small')){const d=S.decor.find(x=>x.id===S.selD);if(d){a.querySelector('.selcard.deco small').textContent=`ของตกแต่ง ไม่รวมในรายการสินค้า · ห่างจากผนังซ้าย ${d.x} ซม.`;return}}if(renderSelDeco())return}
   if(!f){a.innerHTML='<div class="empty">แตะชิ้นงานในภาพเพื่อเลือก แล้วเลื่อนขึ้นลงทีละ 10 ซม. หรือย้ายไปช่องข้าง ๆ</div>';return}
   const {it,b}=f, w=S.bays[b].w, p=prodOf(it,w);
   const pos=`ช่อง ${b+1} · ${it.t==='basket'||it.t==='peg'?'ขอบบน':'ผิวชั้น'}สูงจากพื้น ${slotY(it.slot)} ซม.`;
   if(liveOnly&&a.querySelector('.t small')){a.querySelector('.t small').textContent=pos;return}
   a.innerHTML=`<div class="selcard"><div class="specrow"><div class="specimg">${photo(p.ph,p.dot)}</div><div class="t">${itemLabel(it,w)}<small>${pos}</small><small>รหัส ${p.code}</small></div></div>
     <div class="nudge"><button data-n="up" type="button">▲ ขึ้น 10</button><button data-n="dn" type="button">▼ ลง 10</button><button data-n="l" type="button">◀ ช่องซ้าย</button><button data-n="r" type="button">ช่องขวา ▶</button></div>
-    <div id="selOpts"></div>
+    <div id="selOpts"></div><div id="selDeco"></div>
     <div class="btns"><button class="btn ghost" id="dupAll" type="button">คัดลอกไปทุกช่อง</button><button class="btn danger" id="delSel" type="button">ลบชิ้นนี้</button></div></div>`;
   a.querySelectorAll('[data-n]').forEach(btn=>btn.onclick=()=>{
     const f2=findItem(S.sel); if(!f2) return; const n=btn.dataset.n;
@@ -932,6 +1069,8 @@ function renderSel(liveOnly){
     buildSystem(); commit();
   });
   optsFor(it,$('selOpts'),()=>{normDraft(it);if(!canPlace(b,it,it.slot,it.id)){const s=freeSlot(b,it,0);if(s>=0)it.slot=s}buildSystem();commit()});
+  {const gp=decoGroup(it), box=$('selDeco'); if(gp){box.innerHTML='<div class="label">ของตกแต่งบนชิ้นนี้ · ใช้ประกอบภาพ</div>';const row=document.createElement('div');row.className='chips';
+    DECO_OPTS[gp].forEach(([k,n])=>row.appendChild(chip(n,(it.deco||'none')===k,false,()=>{it.deco=k;buildSystem();commit()})));box.appendChild(row)}}
   $('delSel').onclick=()=>{S.bays[b].items=S.bays[b].items.filter(x=>x.id!==it.id);S.sel=null;buildSystem();commit();toast('ลบแล้ว')};
   $('dupAll').onclick=()=>{let n=0;S.bays.forEach((bay,i)=>{if(i===b)return;const c=Object.assign({},it,{id:uid++});if(canPlace(i,c,it.slot)){bay.items.push(c);n++}});
     buildSystem();commit();toast(n?`คัดลอกไป ${n} ช่อง ระดับเดียวกัน`:'ช่องอื่นไม่มีที่ว่างระดับนี้')};
@@ -964,6 +1103,21 @@ const IDEAS=[
  {n:'21',en:'HOBBY STOREROOM',th:'ห้องงานอดิเรก',c:'s',h:210,top:230,b:[[60,'M40@0 M40@4 M40@8 BS@11 M40@14 M40@18'],[60,'M40@0 M40@4 M40@8 BS@11 M40@14 M40@18'],[60,'M40@0 M40@4 M40@8 BS@11 M40@14 M40@18'],[80,'M40@0 M40@4 M40@8 M40@12 M40@15 M40@18']]},
  {n:'22',en:'BULK STOREROOM',th:'ห้องเก็บของ สต็อกบ้าน',c:'s',h:210,top:225,b:[[80,'M40@0 M40@4 M40@7 A30@8 M40@15'],[60,'M40@0 M40@4 M40@7 BS@9 M40@12 M40@15'],[80,'M40@0 M40@4 M40@7 M40@10 M40@15'],[80,'M40@0 M40@4 M40@7 W40@10 M40@15']]}
 ];
+const IDEA_FLOOR={'01':[['plant','R']],'02':[['hamper','R']],'03':[['plant','L']],'04':[['plant','L']],'05':[['plant','L']],'06':[['plant','R']],'08':[['fridge','R']],'09':[['plant','L']],'10':[['plant','L']],'12':[['plant','L']],
+  '13':[['washer',0],['hamper','R']],'14':[['washer',1],['hamper','L']],'15':[['stack','L'],['hamper','R']],'16':[['washer',0],['washer',1],['hamper','R']],'17':[['washer','L']],
+  '18':[['fbox','*']],'19':[['fbox','*']],'20':[['fbox','*']],'21':[['fbox','*']],'22':[['fbox','*']]};
+function ideaFloor(idea){
+  const fd=IDEA_FLOOR[idea.n]||[], side=fd.some(([,p])=>p==='L'||p==='R');
+  if(side) S.wall.w+=2*(Math.max(...fd.filter(([,p])=>p==='L'||p==='R').map(([k])=>FLOOR[k].w))+25);
+  const out=[], nb=S.bays.length;
+  fd.forEach(([k,pos])=>{const w=FLOOR[k].w;
+    if(pos==='*') S.bays.forEach((b,i)=>out.push({id:uid++,k,x:Math.round(railX(i)+b.w/2-w/2)}));
+    else if(pos==='L') out.push({id:uid++,k,x:Math.max(0,railX(0)-15-w)});
+    else if(pos==='R') out.push({id:uid++,k,x:Math.min(S.wall.w-w,railX(nb)+15)});
+    else out.push({id:uid++,k,x:Math.round(railX(pos)+S.bays[pos].w/2-w/2)});
+  });
+  return out;
+}
 function parseCode(code){
   const [k,sl]=code.split('@'), slot=+sl, d=+(k.replace(/^[A-Z]+/,''))||30;
   const base={d:30,col:'w',hi:false,bk:'s',hk:'rack',slot};
@@ -976,6 +1130,7 @@ function applyIdea(idea,quiet){
   S.railH=idea.h; S.railTop=idea.top; S.hw='w'; S.track=false; S.align='c';
   S.bays=ideaBays(idea);
   S.wall.w=Math.max(180,Math.ceil((totalW()+60)/10)*10); S.wall.h=Math.max(S.wall.h,idea.top+20);
+  S.decor=ideaFloor(idea); S.selD=null; autoDecorate(idea.c);
   S.idea=idea.n; S.sel=null; S.active=0; S.cur=null;
   if(quiet) return;
   buildRoom(); buildSystem(); setView('angle'); commit();
@@ -1047,7 +1202,7 @@ $('clearNo').onclick=()=>{$('clearConfirm').hidden=true};
 $('clearYes').onclick=()=>{S.bays.forEach(b=>b.items=[]);S.sel=null;$('clearConfirm').hidden=true;buildSystem();commit();toast('ล้างสินค้าแล้ว')};
 
 function renderWarn(A){A=A||analyse();const w=$('warnbar');w.hidden=!A.warns.length;w.textContent=A.warns.length?'⚠ '+A.warns[0]+(A.warns.length>1?` (+${A.warns.length-1})`:''):''}
-function renderAll(){const A=analyse();renderIdeaRef();renderStep1();renderStep2();renderSel();renderList(A);renderWarn(A);if(mode2d)render2D();updCurUI()}
+function renderAll(){const A=analyse();renderIdeaRef();renderDecoUI();renderStep1();renderStep2();renderSel();renderList(A);renderWarn(A);if(mode2d)render2D();updCurUI()}
 
 /* ---------- 2D elevation with dimensions ---------- */
 let mode2d=false;
@@ -1065,11 +1220,13 @@ function elevSVG(opt){
   for(let r=0;r<=nb;r++){const x=railX(r);s+=`<rect x="${X(x)-1.25}" y="${Y(top)}" width="2.5" height="${S.railH}" fill="${hwc}"/>`;
     {let jy=top;(railCombo(S.railH)||[]).slice(0,-1).forEach(pc=>{jy-=pc;s+=`<rect x="${X(x)-2}" y="${Y(jy)-.4}" width="4" height=".8" fill="#ff781f"/>`})}
     if(showSlots||opt.mode==='export') for(let k=0;k<nSlots();k++) s+=`<rect x="${X(x)-.4}" y="${Y(slotY(k))-.4}" width=".8" height="3" fill="${S.hw==='k'?'#888':'#fff'}"/>`}
+  if(showDeco) (S.decor||[]).forEach(d=>s+=floor2D(d,X,Y));
   // items
   const hts=[];
   S.bays.forEach((bay,bi)=>{const xL=railX(bi),w=bay.w;
     bay.items.forEach(it=>{const y=slotY(it.slot),K=kindOf(it),bad=A.bad.has(it.id),sel=S.sel===it.id&&opt.mode!=='export';
       const stroke=bad?'#c8361f':sel?'#ff781f':'#56627a', sw=bad||sel?1.4:.5;
+      s+=decoTxt2D(it,xL,w,y,K,bay,X,Y);
       let g=`<g data-id="${it.id}" style="cursor:grab">`, labY=y;
       if(K==='mel'||K==='flat'){const t=Math.max(thick(K),2.2);g+=`<rect x="${X(xL)+.6}" y="${Y(y+t)}" width="${w-1.2}" height="${t}" fill="${K==='mel'?COL[it.col].c:'#fbfcfd'}" stroke="${stroke}" stroke-width="${sw}"/>`}
       else if(K==='wire'){g+=`<rect x="${X(xL)+.6}" y="${Y(y+2.5)}" width="${w-1.2}" height="2.5" fill="url(#gw)" stroke="${stroke}" stroke-width="${sw}"/>`}
@@ -1104,14 +1261,19 @@ let drag2=null;
 function render2D(){const p=$('plan2d');p.innerHTML=elevSVG();}
 function svgPt(e){const svg=$('plan2d').querySelector('svg');const pt=svg.createSVGPoint();pt.x=e.clientX;pt.y=e.clientY;return pt.matrixTransform(svg.getScreenCTM().inverse())}
 $('plan2d').addEventListener('pointerdown',e=>{
-  const g=e.target.closest('[data-id]'); if(!g){if(S.sel!=null){S.sel=null;buildSystem();render2D();renderSel()}return}
+  const gd=e.target.closest('[data-did]');
+  if(gd){const d=S.decor.find(x=>x.id===+gd.dataset.did);if(!d)return;const p=svgPt(e);drag2={did:d.id,dx:(p.x-46)-d.x,moved:false};S.sel=null;S.selD=d.id;render2D();renderSel();$('plan2d').setPointerCapture(e.pointerId);return}
+  const g=e.target.closest('[data-id]'); if(!g){if(S.sel!=null||S.selD!=null){S.sel=null;S.selD=null;buildSystem();render2D();renderSel()}return}
   const id=+g.dataset.id, f=findItem(id); if(!f) return;
   const p=svgPt(e), M=46, y=S.wall.h-(p.y-M);
-  drag2={id,dy:y-slotY(f.it.slot),moved:false}; S.sel=id; S.active=f.b; render2D(); renderSel(); renderBayPick(); renderBays();
+  drag2={id,dy:y-slotY(f.it.slot),moved:false}; S.sel=id; S.selD=null; S.active=f.b; render2D(); renderSel(); renderBayPick(); renderBays();
   $('plan2d').setPointerCapture(e.pointerId);
 });
 $('plan2d').addEventListener('pointermove',e=>{
-  if(!drag2) return; const f=findItem(drag2.id); if(!f) return;
+  if(!drag2) return;
+  if(drag2.did!=null){const d=S.decor.find(x=>x.id===drag2.did);if(!d)return;const p=svgPt(e);const nx=Math.max(0,Math.min(S.wall.w-decoW(d),Math.round(((p.x-46)-drag2.dx)/5)*5));
+    if(nx!==d.x){d.x=nx;drag2.moved=true;buildSystem();render2D();renderSel(true)}return}
+  const f=findItem(drag2.id); if(!f) return;
   const p=svgPt(e), M=46, x=p.x-M, y=S.wall.h-(p.y-M);
   const s=Math.round((S.railTop-5-(y-drag2.dy))/PITCH), b=bayAt(x);
   if(moveTo(f,b<0?f.b:b,s,false)){drag2.moved=true;buildSystem();render2D();renderSel(true);renderWarn()}
@@ -1123,6 +1285,9 @@ function setMode(two){mode2d=two;$('plan2d').hidden=!two;host.style.visibility=t
   if(two)render2D(); else resize(); try{localStorage.setItem(KEY+'-view',two?'2d':'3d')}catch(e){}}
 $('m2d').onclick=()=>setMode(true); $('m3d').onclick=()=>setMode(false);
 document.querySelectorAll('#viewGrp [data-v]').forEach(b=>b.onclick=()=>setView(b.dataset.v));
+$('decoBtn').onclick=()=>{showDeco=!showDeco;buildSystem();renderDecoUI();if(mode2d)render2D()};
+$('autoDeco').onclick=()=>{autoDecorate((IDEAS.find(i=>i.n===S.idea)||{}).c);buildSystem();commit();toast('ใส่ของตกแต่งบนชั้นแล้ว')};
+$('clearDeco').onclick=()=>{S.bays.forEach(b=>b.items.forEach(it=>it.deco='none'));S.decor=[];S.selD=null;buildSystem();commit();toast('เอาของตกแต่งออกแล้ว')};
 $('slotBtn').onclick=()=>{showSlots=!showSlots;$('slotBtn').classList.toggle('on',showSlots);buildSystem();if(mode2d)render2D()};
 
 /* ---------- Export: PNG / PDF with product list ---------- */
@@ -1150,7 +1315,7 @@ function newPage(n,total,dateStr){
   x.fillText(`ผนัง ${S.wall.w}×${S.wall.h} ซม. · ราง ${S.railH} ซม.${comboTxt(S.railH)?' ('+comboTxt(S.railH)+')':''} · ${dateStr}`,PG.w-PG.m,46);
   x.fillText(`หน้า ${n}/${total}`,PG.w-PG.m,78); x.textAlign='left';
   x.fillStyle='#8A93A3'; x.font='400 18px Prompt, sans-serif';
-  x.fillText('หน่วยเป็นเซนติเมตร · ความสูงวัดจากพื้นถึงผิวชั้น / ขอบบนตะกร้า · ตรวจสอบรหัสสินค้าก่อนสั่งซื้อ',PG.m,PG.h-36);
+  x.fillText('หน่วยเป็นเซนติเมตร · ความสูงวัดจากพื้นถึงผิวชั้น / ขอบบนตะกร้า · ของตกแต่งใช้ประกอบภาพ ไม่รวมในรายการสินค้า',PG.m,PG.h-36);
   return {c,x};
 }
 function sectionTitle(x,t,y){x.fillStyle='#073574';x.font='600 30px Prompt, sans-serif';x.textBaseline='alphabetic';x.fillText(t,PG.m,y)}
@@ -1225,7 +1390,7 @@ window.__flexi={S:()=>S,bom,analyse,buildPages,listText,IDEAS:()=>IDEAS,applyIde
 /* ---------- Saved designs (browser; signed-in storage when available) ---------- */
 const LKEY=KEY+'-designs';
 const store={mode:'local',col:null,list:[],ready:false,err:null};
-function stateOf(){return JSON.parse(JSON.stringify({wall:S.wall,railH:S.railH,railTop:S.railTop,hw:S.hw,track:S.track,align:S.align,bays:S.bays,idea:S.idea||null}))}
+function stateOf(){return JSON.parse(JSON.stringify({wall:S.wall,railH:S.railH,railTop:S.railTop,hw:S.hw,track:S.track,align:S.align,bays:S.bays,idea:S.idea||null,decor:S.decor||[]}))}
 const sigOf=st=>JSON.stringify(st);
 function isDirty(){return !S.cur||S.cur.sig!==sigOf(stateOf())}
 function localList(){try{return JSON.parse(localStorage.getItem(LKEY)||'[]')}catch(e){return []}}
@@ -1260,7 +1425,7 @@ function defaultName(){const d=new Date();return `แบบ ${d.getDate()}/${d.g
 function openSave(){$('dName').value=S.cur?S.cur.name:defaultName();$('dSaveOver').hidden=!S.cur;$('dSaveOver').textContent=S.cur?`บันทึกทับ "${S.cur.name}"`:'';
   $('dSaveNew').textContent=S.cur?'บันทึกเป็นแบบใหม่':'บันทึกแบบ';$('saveWhere').textContent=store.mode==='db'?'แบบจะเก็บในบัญชีของคุณ เห็นได้เฉพาะคุณ':'แบบจะเก็บในเบราว์เซอร์นี้เท่านั้น';
   $('saveModal').hidden=false;setTimeout(()=>{$('dName').focus();$('dName').select()},30)}
-function loadDesign(d){const st=d.state;if(!st||!st.bays){toast('แบบนี้เปิดไม่ได้');return}
+function loadDesign(d){const st=d.state;if(!st||!st.bays){toast('แบบนี้เปิดไม่ได้');return}S.decor=[];S.selD=null;
   Object.assign(S,JSON.parse(JSON.stringify(st))); S.sel=null; S.active=0;
   S.bays.forEach(b=>b.items.forEach(it=>uid=Math.max(uid,it.id+1)));
   S.cur={id:d.id,name:d.name,sig:sigOf(stateOf())}; buildRoom(); buildSystem(); setView(); commit(); $('designsModal').hidden=true; toast(`เปิดแบบ "${d.name}" แล้ว`)}
